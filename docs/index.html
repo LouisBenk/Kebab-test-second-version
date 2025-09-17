@@ -1,0 +1,3790 @@
+<!DOCTYPE html> 
+<html lang="de"> 
+<head> 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style> html,body{ font-family: Inter, system-ui, Arial, sans-serif; } </style>
+
+  
+  <meta charset="utf-8" /> 
+    <title>Dönerd – Kebab Finder</title> 
+  <!-- iOS home-screen icon (Safari ignores manifest icons) -->
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+
+  <!-- PWA manifest + theme -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#fb923c">
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js");
+      });
+    }
+  </script>
+
+
+  <!-- Leaflet & MarkerCluster --> 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" /> 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" /> 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" /> 
+  <meta name="viewport" content="width=device-width, initial-scale=1" /> 
+
+  <style> 
+
+  
+    /* === Detail: Categories accordion === */ 
+    .cat-card{ border:1px solid var(--ring); border-radius:14px; background:var(--card); box-shadow:0 3px 8px rgba(0,0,0,.06); overflow:hidden; margin-top:10px; } 
+    .cat-head{ display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; user-select:none; } 
+    .cat-head:hover{ background:rgba(0,0,0,.03); } 
+    html[data-theme="dark"] .cat-head:hover{ background:rgba(255,255,255,.04); } 
+    .cat-title{ font-weight:900; } 
+    .cat-count{ margin-left:auto; font-weight:800; font-size:12px; padding:4px 8px; border-radius:999px; background:var(--chip); color:var(--chipText); border:1px solid var(--ring); } 
+    .cat-body{ padding:10px 12px; display:none; border-top:1px solid var(--ring); } 
+    .cat-card.open .cat-body{ display:block; } 
+    .cat-chips{ display:flex; flex-wrap:wrap; gap:8px; } 
+    .chip-pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid var(--ring); border-radius:999px; background:var(--chip); color:var(--chipText); font-weight:800; font-size:12px; } 
+    .chip-pill .mini{ opacity:.75; font-weight:900; font-size:11px; padding:2px 6px; border-radius:999px; border:1px solid var(--ring); background:var(--card); } 
+
+    /* === Opening hours card (detail sheet) === */ 
+    .hours-card{ border:1px solid var(--ring); background:var(--card); border-radius:14px; box-shadow:0 3px 10px rgba(0,0,0,.06); padding:12px; } 
+    .hours-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; font-weight:900; } 
+    .hours-status{ margin-left:auto; display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; border:1px solid var(--ring); } 
+    .hours-status .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; } 
+    .hours-status.open .dot{ background:#16a34a; } 
+    .hours-status.closed .dot{ background:#ef4444; } 
+    .hours-list{ display:grid; gap:6px; margin-top:6px; } 
+    .hours-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--ring); border-radius:10px; } 
+    .hours-row.is-today{ outline:2px solid rgba(249,115,22,.35); } 
+    .h-day{ width:120px; min-width:120px; font-weight:800; } 
+    .h-time{ color:var(--text); } 
+    .h-closed{ color:var(--muted); font-weight:800; } 
+
+    /* --- toast --- */ 
+    #donerdToast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#111; color:#fff; border-radius:999px; padding:10px 14px; box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:1400; display:none; font-weight:800 } 
+    html[data-theme="dark"] #donerdToast{ background:#0f172a } 
+    #donerdToast.show{ display:block; animation:toastfade .25s ease both } 
+    @keyframes toastfade{ from{opacity:0; transform:translate(-50%,8px)} to{opacity:1; transform:translate(-50%,0)} } 
+    .donerd-input{ width:100%; padding:10px; border-radius:10px; border:1px solid var(--ring); background:transparent; color:var(--text); font:inherit; } 
+
+    /* === Rating modal === */
+
+/* === Edit (Settings) modal === */
+#editOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300}
+#editOverlay.open{display:flex}
+#editModal{
+  width:min(640px,96vw); max-height:86vh; overflow:auto;
+  background:var(--card); color:var(--text);
+  border:1px solid var(--ring); border-radius:16px;
+  box-shadow:0 14px 34px rgba(0,0,0,.35); padding:14px;
+}
+.edit-body .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.edit-body .days{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}
+.edit-row{display:flex;align-items:center;gap:8px}
+.edit-row label{font-weight:800;min-width:120px}
+.edit-input{width:100%;padding:8px 10px;border:1px solid var(--ring);border-radius:10px;background:transparent;color:var(--text);font:inherit}
+@media (max-width:600px){ .edit-body .grid3{grid-template-columns:1fr} }
+
+/* === Edit modal polish + subcategory editors === */
+.edit-sec{margin:14px 0 8px}
+.edit-sec h4{margin:0 0 8px;font-size:14px;font-weight:900;opacity:.9}
+.edit-help{font-size:12px;opacity:.8;margin-top:4px}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.chip-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 10px;border:1px solid var(--ring);border-radius:999px;
+  background:var(--chip);color:var(--chipText);font-weight:800;font-size:12px;user-select:none
+}
+.chip-tag input{display:none}
+.chip-tag.on{background:rgba(249,115,22,.16);border-color:rgba(249,115,22,.35);box-shadow:0 6px 16px rgba(249,115,22,.25)}
+.chip-remove{border:0;background:transparent;font-weight:900;cursor:pointer;opacity:.6}
+.chip-remove:hover{opacity:1}
+.tag-adder{display:flex;gap:6px;margin-top:8px}
+.tag-adder input{flex:1;padding:8px 10px;border:1px solid var(--ring);border-radius:10px;background:transparent;color:var(--text);font:inherit}
+.tag-adder button{border:0;border-radius:10px;padding:8px 12px;font-weight:900;background:var(--accent);color:#000;cursor:pointer;box-shadow:0 4px 12px rgba(249,115,22,.35)}
+
+
+    /* === Reviews modal (list) === */
+#reviewsOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1250}
+#reviewsOverlay.open{display:flex}
+#reviewsModal{
+  width:min(540px,94vw); max-height:86vh; overflow:auto;
+  background:var(--card); color:var(--text);
+  border:1px solid var(--ring); border-radius:16px;
+  box-shadow:0 14px 34px rgba(0,0,0,.35); padding:14px;
+}
+.rev-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rev-title{font-weight:900;font-size:18px}
+.rev-list{display:grid;gap:10px; margin-top:12px}
+.rev-item{border:1px solid var(--ring); border-radius:12px; padding:10px}
+.rev-row{display:flex;align-items:center;gap:8px; justify-content:space-between}
+.rev-author{font-weight:800}
+.rev-stars{font-weight:900; color:#f59e0b}
+.rev-date{opacity:.75; font-size:12px}
+.rev-comment{margin-top:6px; line-height:1.35}
+.rev-empty{opacity:.7; text-align:center; padding:20px 8px}
+.rev-close{border:0; border-radius:999px; padding:6px 10px; font-weight:800; background:#e5e7eb; color:#111; cursor:pointer}
+html[data-theme="dark"] .rev-close{background:#1f2937; color:#e5e7eb}
+
+    #rateOverlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:1200; } 
+    
+    #rateOverlay.open{ display:flex; } 
+    
+    #rateModal{ width:min(420px,92vw); background:var(--card); color:var(--text); border:1px solid var(--ring); border-radius:14px; box-shadow:0 12px 30px rgba(0,0,0,.35); padding:16px; } 
+    .rate-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; } 
+    .rate-title{ font-weight:900; font-size:18px; } 
+    .rate-stars{ display:flex; gap:8px; margin:12px 0; } 
+    .star-btn{ width:36px; height:36px; border-radius:8px; border:1px solid var(--ring); display:grid; place-items:center; cursor:pointer; font-size:18px; background:var(--card); } 
+    .star-btn.on{ background:#fff7ed; border-color:#fed7aa; color:#b45309; } 
+    html[data-theme="dark"] .star-btn.on{ background:#2a1709; border-color:#7a4b27; color:#f59e0b; } 
+    #rateComment{ width:100%; min-height:72px; resize:vertical; padding:8px 10px; border-radius:10px; border:1px solid var(--ring); background:transparent; color:var(--text); font:inherit; } 
+    .rate-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; } 
+    .rate-btn{ border:0; border-radius:999px; padding:8px 14px; font-weight:800; cursor:pointer; } 
+    .rate-cancel{ background:#e5e7eb; color:#111; } 
+    html[data-theme="dark"] .rate-cancel{ background:#1f2937; color:#e5e7eb; } 
+    .rate-submit{ background:var(--accent); color:#000; box-shadow:0 6px 16px rgba(249,115,22,.35); } 
+    .rate-submit:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; } 
+
+    /* === Favorites (heart buttons) === */ 
+.pop-footer{ display:flex; justify-content:flex-end; margin-top:8px; position:relative; z-index:1; }
+
+    .pop-more{ border:0; border-radius:999px; padding:6px 10px; font-weight:800; background:var(--accent); color:#000; cursor:pointer; box-shadow:0 4px 12px rgba(249,115,22,.35); } 
+    .pop-more:hover{ filter:brightness(0.98); } 
+   .fav-btn{ display:inline-grid; place-items:center; width:34px; height:34px; border-radius:999px; border:1px solid var(--ring); background:var(--card); box-shadow:0 2px 10px rgba(0,0,0,.12); cursor:pointer; font-size:16px; color:#ef4444; transition:transform .12s ease, box-shadow .12s ease; text-align:center; line-height:1 }
+
+.fav-btn:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.16) }
+.fav-btn.is-on{ background:#fee2e2; border-color:#fecaca; }
+ 
+    .mini-card .fav-wrap{ position:absolute; right:8px; top:8px; } 
+    .mini-card{ position:relative; } 
+    .side-item .fav-btn{ margin-left:6px; } 
+
+    /* Compact controls bar (no inputs) */ 
+    .side-controls--compact{
+  position:sticky; top:52px; z-index:2;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; padding:10px 12px;
+  background:inherit;
+  border-bottom:1px solid var(--ring);
+  backdrop-filter: blur(6px);
+}
+ 
+    .side-hint{ color:var(--muted); font-size:12px } 
+
+    /* Thumbnail layout in list items */ 
+    /* Sidebar item – tidy, airy, consistent with the rest */ 
+    .side-item{ display:grid; grid-template-columns: 76px 1fr; gap:12px; align-items:start; background:var(--card); border:1px solid var(--ring); border-radius:16px; padding:12px; margin:10px 6px; box-shadow:0 1px 3px rgba(0,0,0,.06); } 
+    .side-thumb{ width:76px; height:76px; border-radius:12px; object-fit:cover; background:#0002; } 
+    .side-main{ display:grid; gap:6px; min-width:0 } 
+    .side-name{ font-weight:900; font-size:15px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:.2px }
+ 
+    .side-addr{ color:var(--muted); font-size:12px; margin-top:2px }
+ 
+    .side-ratings, .side-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px } 
+    .side-prices{ display:flex; gap:6px; flex-wrap:nowrap; align-items:center; justify-content:flex-start; /* natural alignment, no stretching */ overflow:visible; } 
+    .side-prices .price-pill{ display:inline-flex; align-items:center; gap:4px; /* tighter spacing between emoji + price */ padding:4px 8px; border-radius:10px; font-weight:800; font-size:13px; /* slightly smaller so 3 always fit */ white-space:nowrap; } 
+    .meta-pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:var(--chip); color:var(--chipText); border:1px solid var(--ring); font-weight:800; font-size:12px; } 
+    .side-cta{
+  justify-self:end; margin-top:6px;
+  background:var(--accent); color:#000; border:0;
+  border-radius:14px; padding:10px 16px;
+  font-weight:900;
+  box-shadow:0 8px 20px rgba(249,115,22,.35);
+  transition:transform .14s ease, box-shadow .14s ease, filter .14s ease;
+}
+.side-cta:hover{ transform:translateY(-1px); box-shadow:0 14px 28px rgba(249,115,22,.45) }
+.side-cta:active{ transform:translateY(0); filter:saturate(.98) }
+ 
+    .side-cta:hover{ background:var(--accent-strong) }
+    :root{ --bg:#f0f0f0; --text:#111; --muted:#6b7280; --card:#fff; --ring:#e5e7eb; --chip:#eef0f3; --chipText:#0f172a; --accent:#fb923c; --accent-strong:#f97316; --shadow:0 4px 16px rgba(0,0,0,.12); } 
+    :root{ --topbar-h: 64px; --gap-top: 16px; } 
+    @media (max-width: 600px){ :root{ --topbar-h: 56px; } } 
+    html[data-theme="dark"]{ --bg:#0b0f14; --text:#e5e7eb; --muted:#9aa4b2; --card:#0f172a; --ring:#1f2937; --chip:#0b1220; --chipText:#e5e7eb; --accent:#fb923c; --accent-strong:#f97316; --shadow:0 8px 24px rgba(0,0,0,.45); } 
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+body.no-scroll{ overflow:hidden; }
+ 
+    button{font:inherit} 
+
+/* ===== Topbar (about style) ===== */
+/* ===== Topbar (exact look used on the other pages) ===== */
+:root{ --topbar-h:56px; --pill-h:40px; }
+
+#navbar{
+  position:fixed; top:0; left:0; right:0;
+  height:var(--topbar-h);
+  display:flex; align-items:center; justify-content:center;
+  padding:0 8px; z-index:1000; background:transparent;
+  backdrop-filter: blur(10px);
+  border-bottom:1px solid transparent;
+}
+@media (max-width:600px){
+  :root{ --topbar-h:56px; --pill-h:36px; }
+
+  /* keep container visible so hamburger can live here */
+  .right-actions{ display:flex; gap:6px; margin-left:auto; min-width:0; }
+
+  /* hide all pills on phones; hamburger shows */
+  .right-actions .action-pill{ display:none; }
+
+  /* show hamburger on phones */
+  #menuBtn{
+    display:inline-flex; margin-left:auto; align-items:center; gap:8px; padding:8px 12px;
+    background:var(--card); border:1px solid var(--ring); border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06); font-weight:800; cursor:pointer; color:var(--text);
+  }
+
+  .brand{ font-size:20px; padding-left:2px; }
+  .searchbar{ min-width:0; max-width:100%; padding:4px; border-radius:12px; }
+  .search-seg{ padding:8px 10px; }
+  .seg-icon{ width:18px; height:18px; font-size:12px; }
+}
+
+
+.nav-inner{ width:100%; max-width:1200px; display:flex; align-items:center; gap:12px; }
+.brand{ display:flex; align-items:center; gap:10px; font-weight:900; font-size:28px; padding-left:6px; flex:0 0 auto; }
+.brand .dot{ width:12px; height:12px; border-radius:50%; background:#ff385c; display:inline-block; }
+
+.action-pill,.searchbar,.search-seg,.lang-toggle button{ min-height:var(--pill-h); }
+
+/* Search pill */
+.searchbar{
+  flex:0 1 620px; display:flex; align-items:center;
+  background:var(--card);
+  border-radius:999px;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  padding:6px; min-width:240px; max-width:620px;
+  border:1px solid var(--ring); margin-left:12px;
+}
+.search-seg{ flex:1; display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:999px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; }
+
+/* === Search suggestions dropdown === */
+.search-suggest{
+  position:absolute; left:8px; right:8px; top:calc(100% + 6px);
+  background:var(--card); color:var(--text);
+  border:1px solid var(--ring); border-radius:12px;
+  box-shadow:0 12px 28px rgba(0,0,0,.18);
+  max-height:300px; overflow:auto; z-index:1200; display:none;
+}
+.search-suggest.open{ display:block; }
+.search-suggest .item{ display:flex; gap:8px; padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--ring); }
+.search-suggest .item:last-child{ border-bottom:0; }
+.search-suggest .item:hover, .search-suggest .item.is-active{ background:rgba(0,0,0,.04); }
+html[data-theme="dark"] .search-suggest .item:hover,
+html[data-theme="dark"] .search-suggest .item.is-active{ background:rgba(255,255,255,.06); }
+.search-suggest .emoji{ width:20px; display:inline-grid; place-items:center; }
+.search-suggest .main{ font-weight:800; line-height:1.2; }
+.search-suggest .sub{ font-size:12px; color:var(--muted); line-height:1.2; }
+
+.search-seg:hover{ background:rgba(0,0,0,.04) }
+html[data-theme="dark"] .search-seg:hover{ background:rgba(255,255,255,.05) }
+.seg-icon{ width:20px; height:20px; display:inline-grid; place-items:center; border-radius:6px; background:#f3f4f6; font-size:14px }
+html[data-theme="dark"] .seg-icon{ background:#111827; color:#e5e7eb }
+.seg-input{ flex:1; display:flex; align-items:center; gap:8px; min-width:0 }
+.seg-input input{ width:100%; border:0; outline:0; background:transparent; color:var(--text); font:inherit }
+
+/* === Search suggestions dropdown === */
+.search-suggest{
+  position:absolute; left:8px; right:8px; top:calc(100% + 6px);
+  background:var(--card); color:var(--text);
+  border:1px solid var(--ring); border-radius:12px;
+  box-shadow:0 12px 28px rgba(0,0,0,.18);
+  max-height:300px; overflow:auto; z-index:1200; display:none;
+}
+.search-suggest.open{ display:block; }
+.search-suggest .item{
+  display:flex; align-items:flex-start; gap:8px; padding:10px 12px; cursor:pointer;
+  border-bottom:1px solid var(--ring);
+}
+.search-suggest .item:last-child{ border-bottom:0; }
+.search-suggest .item:hover, .search-suggest .item.is-active{
+  background:rgba(0,0,0,.04);
+}
+html[data-theme="dark"] .search-suggest .item:hover,
+html[data-theme="dark"] .search-suggest .item.is-active{
+  background:rgba(255,255,255,.06);
+}
+.search-suggest .main{ font-weight:800; line-height:1.2; }
+.search-suggest .sub{ font-size:12px; color:var(--muted); line-height:1.2; }
+.search-suggest .emoji{ width:20px; display:inline-grid; place-items:center; }
+
+
+/* Right side actions */
+.right-actions{ display:flex; align-items:center; gap:10px; margin-left:auto; min-width:0; }
+/* anchors should look like pills, not links */
+a.action-pill{ text-decoration:none; color:inherit; }
+a.action-pill:visited{ color:inherit; }
+
+/* hide hamburger by default (will show on mobile) */
+#menuBtn{ display:none; }
+
+.action-pill{
+  display:flex; align-items:center; gap:8px; padding:8px 14px;
+  background:var(--card); border:1px solid var(--ring);
+  border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.06);
+  font-weight:700; white-space:nowrap; cursor:pointer; color:var(--text)
+}
+
+.action-pill:hover{ background:rgba(0,0,0,.04) }
+html[data-theme="dark"] .action-pill:hover{ background:rgba(255,255,255,.05) }
+.action-icon{ width:18px; height:18px; display:inline-grid; place-items:center; border-radius:50%; background:#f3f4f6; font-size:12px; color:#374151 }
+html[data-theme="dark"] .action-icon{ background:#111827; color:#e5e7eb }
+
+/* Language toggle */
+.lang-toggle{ display:inline-flex; background:var(--card); border:1px solid var(--ring); border-radius:999px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06) }
+.lang-toggle button{ min-width:60px; padding:8px 12px; font-weight:800; border:0; background:transparent; cursor:pointer; line-height:1; color:var(--text) }
+.lang-toggle button+button{ border-left:1px solid var(--ring) }
+.lang-toggle button.is-active{ background:var(--accent); color:#000 }
+
+/* Mobile tweaks */
+@media (max-width:600px){
+  /* show hamburger on mobile; hide the pill row */
+#menuBtn{
+  display:inline-flex; margin-left:auto; align-items:center; gap:8px; padding:8px 12px;
+  background:var(--card); border:1px solid var(--ring); border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.06); font-weight:800; cursor:pointer; color:var(--text);
+  
+}
+.right-actions{ display:flex; gap:6px; margin-left:auto; min-width:0; }
+.right-actions .action-pill{ display:none; }
+
+  :root{ --topbar-h:56px; --pill-h:36px; }
+  .brand{ font-size:20px; padding-left:2px; }
+  .searchbar{ min-width:0; max-width:100%; padding:4px; border-radius:12px; }
+  .search-seg{ padding:8px 10px; }
+  .seg-icon{ width:18px; height:18px; font-size:12px; }
+  .right-actions{ gap:6px; }
+  .action-pill{ padding:8px 10px; }
+  .action-pill span:last-child{ display:none; }
+}
+
+/* Dropdown (login) */
+.dropdown{ position:relative; }
+.dropdown-menu{
+  position:absolute; right:0; top:calc(100% + 8px);
+  background:var(--card); border:1px solid var(--ring);
+  border-radius:12px; box-shadow:var(--shadow); padding:6px;
+  min-width:180px; z-index:2000;
+}
+.dropdown-menu.hidden{ display:none; }
+.dropdown-menu a, .dropdown-menu button{
+  display:flex; width:100%; gap:8px; align-items:center;
+  background:transparent; border:0; padding:8px 10px;
+  font-weight:800; cursor:pointer; text-align:left; color:var(--text);
+}
+.dropdown-menu a:hover, .dropdown-menu button:hover{
+  background:rgba(0,0,0,.04);
+}
+/* Mobile menu panel */
+#mobileMenu{
+  position:absolute; right:8px; top:calc(100% + 8px);
+  background:var(--card); border:1px solid var(--ring);
+  border-radius:12px; box-shadow:var(--shadow); padding:8px;
+  z-index:2000;
+}
+#mobileMenu .menu-group{ padding:6px 4px; border-top:1px solid var(--ring); }
+#mobileMenu .menu-group:first-child{ border-top:0; }
+#mobileMenu .menu-item{
+  display:flex; align-items:center; gap:8px; padding:10px 12px;
+  font-weight:800; background:transparent; border:0; width:100%; text-align:left;
+}
+#mobileMenu .menu-item:hover{ background:rgba(0,0,0,.04); }
+html[data-theme="dark"] #mobileMenu .menu-item:hover{ background:rgba(255,255,255,.06); }
+
+html[data-theme="dark"] .dropdown-menu a:hover,
+html[data-theme="dark"] .dropdown-menu button:hover{
+  background:rgba(255,255,255,.06);
+}
+
+
+ 
+    #map{ 
+      position:fixed; left:0; right:0; 
+      top:calc(var(--topbar-h) + var(--gap-top)); 
+      border-radius:10px; 
+      overflow:hidden; 
+      box-shadow:0 4px 12px rgba(0,0,0,.2); 
+      height:calc(100vh - var(--topbar-h) - var(--gap-top) - env(safe-area-inset-bottom, 0px)); 
+    } 
+    @supports (height: 100dvh){ 
+      #map{ height:calc(100dvh - var(--topbar-h) - var(--gap-top) - env(safe-area-inset-bottom, 0px)); } 
+    } 
+
+    /* Geolocation button */ 
+/* My location dot (pulsing) */
+.me-dot{
+  width:14px; height:14px; border-radius:50%;
+  background:#2563eb; border:2px solid #fff; box-shadow:0 0 0 6px rgba(37,99,235,.20);
+}
+html[data-theme="dark"] .me-dot{ border-color:#0b0f14; box-shadow:0 0 0 6px rgba(37,99,235,.25); }
+.me-dot::after{
+  content:"";
+  position:absolute; inset:-8px;
+  border:2px solid rgba(37,99,235,.45); border-radius:50%;
+  animation:mePulse 2s ease-out infinite;
+}
+@keyframes mePulse{
+  0%{ transform:scale(.6); opacity:.85 }
+  100%{ transform:scale(1.6); opacity:0 }
+}
+
+   .locate-btn{
+  position:fixed;
+  top:calc(var(--topbar-h) + var(--gap-top) + 12px);
+  right:14px; left:auto; transform:none; /* ✅ back to right side */
+  z-index:1002;
+  width:60px; height:60px;
+  border-radius:16px;
+  background:var(--card);
+  border:1px solid var(--ring);
+  display:grid; place-items:center;
+  font-size:28px;
+  box-shadow:0 6px 14px rgba(0,0,0,.28);
+  cursor:pointer;
+  color:var(--text);
+}
+
+ 
+    .locate-btn:hover{transform:scale(1.04)} 
+
+    /* ===== LEFT RIBBON SIDEBAR ===== */ 
+    #sidebar{
+  position:fixed;
+  top:calc(var(--topbar-h) + var(--gap-top));
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  left:0;
+  width:360px; max-width:92vw;
+  background:color-mix(in oklab, var(--card) 96%, transparent);
+  backdrop-filter: blur(8px) saturate(115%);
+  border-right:1px solid var(--ring);
+  border-radius:0 16px 16px 0;
+  box-shadow:0 14px 36px rgba(0,0,0,.18);
+  z-index:1001;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+  transition:transform .25s ease, box-shadow .2s ease;
+}
+ 
+    @media (max-width: 600px){ 
+      #sidebar{ 
+        width: 85vw; /* drawer ~85% of screen */ 
+        max-width: 85vw; 
+      } 
+      body:not(.side-collapsed) #map{ left: 0; /* map always full width */ } 
+    } 
+    body.side-collapsed #sidebar{transform:translateX(-102%);} 
+    #sideTab{
+  position:absolute; top:120px; left:0; transform:translateX(-50%);
+  z-index:1001; display:none;
+  background:var(--card); color:var(--text);
+  border:1px solid var(--ring); border-radius:14px;
+  padding:10px 12px; font-weight:900;
+  box-shadow:0 10px 24px rgba(0,0,0,.22);
+}
+ 
+    body.side-collapsed #sideTab{display:block} 
+    .side-header{
+  position:sticky; top:0; z-index:2;
+  display:flex; align-items:center; gap:8px;
+  padding:12px 14px;
+  background:inherit;
+  border-bottom:1px solid var(--ring);
+}
+ 
+    .side-title{font-weight:900} 
+    .side-controls{display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;border-bottom:1px solid var(--ring)} 
+    .side-controls .pill{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--ring);border-radius:999px;padding:6px 10px} 
+    .side-controls input{width:80px;border:0;outline:0;background:transparent;color:var(--text)} 
+    .side-controls select{border:0;background:transparent;color:var(--text);font-weight:700} 
+    .side-list{
+  overflow:auto; padding:8px 10px 14px; flex:1;
+  scroll-behavior:smooth; scrollbar-gutter:stable;
+}
+.side-list::-webkit-scrollbar{ width:10px }
+.side-list::-webkit-scrollbar-thumb{ background:color-mix(in oklab, var(--ring) 80%, transparent); border-radius:999px }
+.side-list::-webkit-scrollbar-track{ background:transparent }
+ 
+    .side-item{
+  background:var(--card);
+  border:1px solid var(--ring);
+  border-radius:16px;
+  padding:12px 14px;
+  margin:10px 6px;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  transition:transform .14s ease, box-shadow .14s ease, outline-color .14s ease;
+  cursor:pointer;
+}
+.side-item:hover{ transform:translateY(-1px); box-shadow:0 10px 24px rgba(0,0,0,.12) }
+.side-item:focus-within{ outline:2px solid rgba(249,115,22,.35) }
+ 
+    .side-item:hover{ outline:2px solid rgba(249,115,22,.35) }
+.side-item:focus-within{ outline:2px solid rgba(249,115,22,.45) }
+ 
+    .side-name{font-weight:900;margin:0 0 4px 0} 
+    .side-addr{color:var(--muted);font-size:12px;margin-bottom:6px} 
+    .pill-row{display:flex;gap:6px;flex-wrap:wrap} 
+    .price-pill{display:inline-flex;align-items:baseline;gap:6px;background:#f8fafc;color:#0f172a;border:1px solid var(--ring);border-radius:12px;padding:6px 8px;font-weight:800} 
+    html[data-theme="dark"] .price-pill{background:#0b1220;color:#e5e7eb} 
+
+    /* Rating pills (SWAPPED colors: user = yellow, admin = blue) */ 
+    /* === Reviews badges (sidebar + detail) — match popup look === */
+.rating-pill{
+  -webkit-appearance:none;
+  appearance:none;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;          /* same as .pop-rating */
+  border-radius:999px;
+  font-weight:800;
+  font-size:12px;
+  border:1px solid transparent;
+  background:transparent;
+  cursor:pointer;
+  transition:transform .14s ease, box-shadow .14s ease, filter .14s ease;
+}
+
+/* User average (yellow/orange) */
+.rating-pill.rating-user{
+  background:#fff7ed;
+  color:#7c2d12;
+  border-color:#fed7aa;
+}
+html[data-theme="dark"] .rating-pill.rating-user{
+  background:#2a1709;
+  color:#ffd2a1;
+  border-color:#7a4b27;
+}
+
+/* Admin score (blue) */
+.rating-pill.rating-admin{
+  background:#e0f2fe;
+  color:#0c4a6e;
+  border-color:#7dd3fc;
+}
+html[data-theme="dark"] .rating-pill.rating-admin{
+  background:#072534;
+  color:#93c5fd;
+  border-color:#1e3a8a;
+}
+
+/* Hover lift (same as other pills) */
+.rating-pill:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,.18); filter:saturate(1.02); }
+
+/* Star colors */
+.star-user{ color:#f59e0b; font-weight:900; }
+.star-admin{ color:#06b6d4; font-weight:900; }
+
+    /* Float-up hover for rating badges (sidebar + popup) */
+.rating-pill,
+.pop-rating{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border-radius:999px;
+  transition:transform .14s ease, box-shadow .14s ease, filter .14s ease;
+  cursor:pointer;
+}
+
+.rating-pill:hover,
+.pop-rating:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 18px rgba(0,0,0,.18);
+  filter:saturate(1.02);
+}
+ 
+    .star{font-weight:900} 
+    .star-user{color:#f59e0b} 
+    .star-admin{color:#06b6d4} 
+    .go-btn{margin-left:auto;background:var(--accent);color:#000;border:0;border-radius:999px;padding:6px 10px;font-weight:800;cursor:pointer} 
+
+    /* ===== Modal (filters) ===== */ 
+    #modalOverlay{
+  display:none; position:fixed; inset:0; z-index:1003;
+  justify-content:center; align-items:flex-end;
+  padding:24px 24px calc(24px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.45));
+  backdrop-filter: blur(6px);
+  overscroll-behavior: contain;
+}
+ 
+ #modal{
+  width:min(760px,96vw);
+  max-height:90vh; overflow:auto;
+  background:color-mix(in oklab, var(--card) 94%, transparent);
+  backdrop-filter:saturate(125%) blur(10px);
+  border-radius:22px 22px 0 0;
+  padding:22px 22px 28px;
+  box-shadow:0 24px 72px rgba(0,0,0,.38);
+  color:var(--text);
+  border:1px solid color-mix(in oklab, var(--ring) 65%, transparent);
+  scrollbar-gutter:stable;
+  container-type:inline-size;
+  animation:sheetIn .22s ease-out both;
+}
+@keyframes sheetIn{from{transform:translateY(14px);opacity:.0} to{transform:translateY(0);opacity:1}}
+
+ 
+    .modal-header{
+  position:sticky; top:0; background:inherit;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 0 12px; z-index:1;
+  border-bottom:1px solid var(--ring);
+}
+ 
+    .modal-title{font-weight:900;font-size:clamp(20px, 4cqi, 28px); letter-spacing:.2px}
+ 
+    .modal-reset{background:#eef2f7;border:1px solid var(--ring);border-radius:999px;padding:8px 14px;cursor:pointer} 
+    .section{margin-top:18px} 
+    .section h4{margin:0 0 10px;font-size:16px} 
+    .chip-row{display:flex;flex-wrap:wrap;gap:10px} 
+    .chip{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:12px 16px; border-radius:14px;
+  background:var(--chip); color:var(--chipText);
+  border:1px solid var(--ring);
+  cursor:pointer; user-select:none;
+  transition:transform .14s ease, box-shadow .14s ease, background-color .14s ease, border-color .14s ease;
+}
+.chip:hover{ background:color-mix(in oklab, var(--chip) 88%, transparent) }
+.chip:has(input:focus-visible){ outline:2px solid color-mix(in oklab, var(--accent) 55%, transparent); outline-offset:2px }
+.chip:active{ transform:translateY(1px) }
+.chip input[type="checkbox"]{ display:none; }
+.chip:has(input:checked),
+.chip.active{
+  background:rgba(249,115,22,.16);
+  border-color:rgba(249,115,22,.35);
+  box-shadow:0 6px 16px rgba(249,115,22,.25);
+}
+.chip-emoji{ font-size:16px; }
+.chip-lg{ padding:12px 14px; }
+ 
+    .chip input[type="checkbox"]{ display:none; } 
+    .chip.active{background:rgba(249,115,22,.16);border-color:rgba(249,115,22,.35)} 
+    .pill{display:flex;align-items:center;gap:10px;background:var(--chip);border:1px solid var(--ring);border-radius:14px;padding:10px 12px} 
+    .pill .value{margin-left:auto;font-weight:900} 
+    .slider{
+  width:100%; height:10px; appearance:none; -webkit-appearance:none;
+  border-radius:999px; background:linear-gradient(90deg,#e5e7eb,#d1d5db);
+  border:1px solid var(--ring); outline:0;
+}
+.slider::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none;
+  width:22px; height:22px; border-radius:50%;
+  background:var(--card); border:2px solid var(--accent);
+  box-shadow:0 2px 8px rgba(0,0,0,.18); cursor:pointer;
+}
+.slider::-moz-range-thumb{
+  width:22px; height:22px; border-radius:50%;
+  background:var(--card); border:2px solid var(--accent);
+  box-shadow:0 2px 8px rgba(0,0,0,.18); cursor:pointer;
+}
+.slider:focus-visible{ outline:2px solid color-mix(in oklab, var(--accent) 55%, transparent); outline-offset:2px }
+
+    .subtle{color:var(--muted);font-size:12px} 
+    .modal-actions{margin-top:22px;display:flex;justify-content:center} 
+    #applyBtn{width:100%;max-width:420px;background:var(--accent);color:#000;font-weight:800;font-size:18px;border:none;border-radius:999px;padding:14px 18px;cursor:pointer;box-shadow:0 6px 16px rgba(249,115,22,.35)} 
+    .hidden{display:none !important} 
+
+    .modal-top{display:flex;align-items:center;gap:12px} 
+    .bubble{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid var(--ring);border-radius:999px;padding:6px 10px} 
+    .ok{color:#16a34a;font-weight:900} 
+
+    .pill-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px} 
+    @media (max-width:820px){ .pill-group{grid-template-columns:1fr} } 
+
+    /* ===== Refreshed Filter UI ===== */ 
+    /* --- Rating card polish --- */ 
+    .rating-card{ padding-bottom:14px; } 
+    .rating-badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-weight:900; background:#fff7ed; color:#7c2d12; border:1px solid #fed7aa; } 
+    html[data-theme="dark"] .rating-badge{ background:#2a1709; color:#ffd2a1; border-color:#7a4b27; } 
+
+    /* Slider theming */ 
+    .rating-slider{ appearance:none; -webkit-appearance:none; width:100%; height:10px; border-radius:999px; background:linear-gradient(90deg,#fca5a5, #fde047, #86efac, #60a5fa); outline:none; border:1px solid var(--ring); } 
+    .rating-slider::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:22px; height:22px; border-radius:50%; background:var(--card); border:2px solid #f59e0b; box-shadow:0 2px 6px rgba(0,0,0,.18); cursor:pointer; } 
+    .rating-slider::-moz-range-thumb{ width:22px; height:22px; border-radius:50%; background:var(--card); border:2px solid #f59e0b; box-shadow:0 2px 6px rgba(0,0,0,.18); cursor:pointer; } 
+    /* tiny ticks below */ 
+    .rating-scale{ display:grid; grid-template-columns:repeat(5,1fr); font-size:11px; opacity:.8; margin-top:6px; } 
+    .rating-scale span{ text-align:center; } 
+
+    .filter-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:6px; border-bottom:1px solid var(--ring); } 
+    .filter-header .header-left{ display:grid; gap:4px; } 
+    .filter-header .header-right{ display:flex; align-items:center; gap:10px; } 
+    .match-badge{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; font-weight:800; background:var(--chip); color:var(--chipText); border:1px solid var(--ring); } 
+    .match-badge .dot{ color:#16a34a; } 
+
+    .filter-sections{ display:grid; gap:18px; padding-top:12px; } 
+    .filter-section .section-title{ margin:0 0 10px; font-size:14px; opacity:.9; } 
+    .chip-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; } 
+    @media (max-width: 820px){ .chip-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } } 
+   
+    /* (duplicate .chip block removed in favor of unified chip styles above) */
+
+ 
+    .chip input[type="checkbox"]{ display:none; } /* only hide the checkboxes */ 
+    .chip.active{ outline:2px solid rgba(249,115,22,.25); border-color: rgba(249,115,22,.35); } 
+    .chip-emoji{ font-size:16px; } 
+    .chip-lg{ padding:12px 14px; } 
+
+    .subchips{ display:grid; gap:8px; margin-top:10px; } 
+    .subchips .chip-row{ display:flex; flex-wrap:wrap; gap:8px; } 
+    .subchips .chip-row label.chip{ padding:8px 10px; border-radius:999px; font-size:12px; } 
+
+    .card-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } 
+    @media (min-width: 840px){ .card-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); } } 
+    .slider-card{
+  background:var(--card);
+  border:1px solid var(--ring);
+  border-radius:16px;
+  padding:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.slider-card:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,.12)}
+ 
+    .slider-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; } 
+    .slider-value{ font-weight:900; opacity:.9; } 
+
+    .filter-footer{
+  position:sticky; bottom:0; background:inherit;
+  padding-top:14px; margin-top:10px;
+  border-top:1px solid var(--ring);
+  display:flex; justify-content:center;
+}
+
+.apply-btn{
+  width:100%; max-width:420px;
+  background:var(--accent); color:#000;
+  font-weight:900; font-size:18px;
+  border:none; border-radius:16px;
+  padding:16px 20px; cursor:pointer;
+  box-shadow:0 10px 28px rgba(249,115,22,.35);
+  transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.apply-btn:hover{ transform:translateY(-1px); box-shadow:0 14px 32px rgba(249,115,22,.45) }
+.apply-btn:active{ transform:translateY(0); filter:saturate(.98) }
+.apply-btn:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none }
+
+ 
+
+    /* Cluster pins */
+.cluster-icon{position:relative;width:34px;height:44px}
+.cluster-icon .pin{position:absolute;left:3px;top:6px;width:28px;height:28px;border-radius:50%;background:var(--accent);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.cluster-icon .pin::after{content:"";position:absolute;left:12px;top:24px;width:6px;height:10px;background:var(--accent);transform:rotate(45deg);border-bottom-left-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.cluster-icon .badge{position:absolute;right:-8px;top:-2px;min-width:18px;height:18px;padding:0 4px;font-size:12px;font-weight:800;line-height:18px;text-align:center;color:#fff;background:#111;border:2px solid #fff;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+
+/* Single shop pins (verified vs unverified) */
+.shop-pin{position:relative;width:28px;height:40px}
+.shop-pin .p{position:absolute;left:6px;top:4px;width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.28)}
+.shop-pin .p::after{content:"";position:absolute;left:6px;top:14px;width:6px;height:8px;transform:rotate(45deg);border-bottom-left-radius:6px}
+.shop-pin.verified .p{background:var(--accent)}
+.shop-pin.verified .p::after{background:var(--accent)}
+.shop-pin.unverified .p{background:#9ca3af; position:relative}             /* gray */
+.shop-pin.unverified .p::after{background:#9ca3af}
+
+/* add sablier icon on unverified pins */
+.shop-pin.unverified::before{
+  content:"⏳";
+  position:absolute;
+  top:-6px; right:-6px;
+  font-size:14px;
+  z-index:5;                    /* ✅ always in foreground */
+  background:#fff;
+  border-radius:50%;
+  padding:1px;
+  line-height:1;
+  box-shadow:0 0 2px rgba(0,0,0,.4);  /* subtle outline */
+}
+
+
+/* Status badges */
+.status-badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;font-weight:800;font-size:11px;border:1px solid var(--ring);background:var(--chip);color:var(--chipText)}
+.status-badge.ok{background:#dcfce7;border-color:#bbf7d0;color:#065f46}
+.status-badge.warn{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
+
+    /* ====== COMPACT POPUP CARD (clean) ====== */ 
+    .donerd-popup .leaflet-popup-content-wrapper{ overflow:hidden; }
+.donerd-popup .leaflet-popup-content{ margin:10px 12px; width:auto !important; }
+
+@media (max-width:420px){
+  .pop-card{ grid-template-columns:1fr; width:92vw; }
+  .pop-media img{ width:100%; height:auto; }
+}
+
+    .donerd-popup .leaflet-popup-content-wrapper{ background:var(--card); color:var(--text); border:1px solid var(--ring); border-radius:16px; box-shadow:0 14px 32px rgba(0,0,0,.25); } 
+    .donerd-popup .leaflet-popup-tip{ background:var(--card); border:1px solid var(--ring); } 
+
+    @media (max-width: 600px){ 
+      .pop-card{ grid-template-columns: 1fr; /* stack vertically */ width: 92vw; } 
+      .pop-media img{ width: 100%; height: auto; } 
+    } 
+
+    .pop-card{
+  display:grid; grid-template-columns:120px 1fr; gap:12px;
+  width:min(380px,92vw);
+  align-items:start;
+}
+ 
+    .pop-media{ position:relative; } 
+    .pop-media img{
+  width:120px; height:100px; object-fit:cover;
+  border-radius:14px; background:#0002;
+  box-shadow:0 3px 10px rgba(0,0,0,.15);
+} 
+    .pop-head .fav-btn{ margin-left:6px; } 
+    .pop-head{ display:flex; align-items:center; gap:8px; } 
+    .pop-title{ font-weight:900; font-size:16px; line-height:1.15; flex:1; min-width:0; } 
+    .pop-rating{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; background:#fff7ed; color:#7c2d12; border:1px solid #fed7aa; } 
+    .pop-prices{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  margin-top:6px;
+  width:100%;              /* ensures grid fits inside popup */
+}
+ 
+    .pop-pill{
+  display:inline-flex; align-items:center; gap:6px; justify-content:center;
+  padding:8px 12px; border-radius:14px; font-weight:900;
+  background:#f8fafc; color:#0f172a; border:1px solid var(--ring);
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  transition:transform .12s ease, box-shadow .12s ease;
+  cursor:pointer;
+}
+.pop-pill:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.12) }
+ 
+    html[data-theme="dark"] .pop-pill{ background:#0b1220; color:#e5e7eb; } 
+   .pop-tags{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;          /* wrap instead of nowrap */
+  align-items:center;
+  margin-top:6px;
+  overflow:hidden;
+}
+ 
+.pop-tag{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px;
+  background:var(--chip); color:var(--chipText); border:1px solid var(--ring);
+  cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease;
+}
+.pop-tag:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.12); }
+.pop-tag.is-on{
+  background:rgba(249,115,22,.16); border-color:rgba(249,115,22,.35);
+  box-shadow:0 6px 16px rgba(249,115,22,.25);
+}
+html[data-theme="dark"] .pop-tag.is-on{
+  background:rgba(249,115,22,.12); border-color:rgba(249,115,22,.35);
+}
+
+.pop-tag.is-on{
+  background:rgba(249,115,22,.16); border-color:rgba(249,115,22,.35);
+  box-shadow:0 6px 16px rgba(249,115,22,.25);
+}
+html[data-theme="dark"] .pop-tag.is-on{
+  background:rgba(249,115,22,.12); border-color:rgba(249,115,22,.35);
+}
+
+.pop-pill.is-on,
+.side-prices .price-pill.is-on{
+  background:rgba(249,115,22,.16); border-color:rgba(249,115,22,.35);
+  box-shadow:0 6px 16px rgba(249,115,22,.20);
+}
+html[data-theme="dark"] .pop-pill.is-on,
+html[data-theme="dark"] .side-prices .price-pill.is-on{
+  background:rgba(249,115,22,.12); border-color:rgba(249,115,22,.35);
+}
+
+ 
+
+    /* Herz-Button wiederverwenden */ 
+   .fav-btn{
+  display:grid; place-items:center;   /* ✅ grid centering like locate-btn */
+  width:32px; height:32px;
+  border-radius:999px;
+  border:1px solid var(--ring);
+  background:var(--card);
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+  cursor:pointer;
+  color:#ef4444;
+  text-align:center; line-height:1; padding:0;
+}
+
+    .fav-btn.is-on{ background:#fee2e2; border-color:#fecaca; } 
+
+    /* Empty overlay */ 
+    .empty{position:absolute;top:92px;left:50%;transform:translateX(-50%);z-index:1002;background:var(--card);border:1px solid var(--ring);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.2);padding:10px 12px;display:flex;gap:10px;align-items:center;color:var(--text)} 
+    .empty .btn{background:var(--accent);color:#000;border:none;border-radius:999px;padding:6px 10px;font-weight:800;cursor:pointer} 
+    .empty.hidden{display:none} 
+
+    @media (max-width:920px){ 
+      body:not(.side-collapsed) #map{left:0;} 
+      #sidebar{width:92vw} 
+    } 
+
+    /* ======= Bottom Sheet (detail view) ======= */ 
+    #detailOverlay{position:fixed;inset:0;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);z-index:1100} 
+    #detailOverlay.open{display:flex} 
+    #detailSheet{width:min(820px,96vw);max-height:90vh;background:var(--card);border:1px solid var(--ring);border-radius:18px 18px 0 0;box-shadow:0 12px 30px rgba(0,0,0,.35);overflow:auto} 
+    .sheet-head{padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--ring)} 
+    .sheet-title{font-size:20px;font-weight:900} 
+    .sheet-sub{color:var(--muted);font-size:13px} 
+    .sheet-hero{position:relative;width:100%;height:220px;overflow-x:auto;display:flex;gap:6px;scroll-snap-type:x mandatory;background:#0002} 
+    .sheet-hero img{height:220px;width:auto;object-fit:cover;border-radius:10px;scroll-snap-align:center} 
+
+    /* Row spacing consistent with other sections */ 
+    .actions-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:12px 14px; border-bottom:1px solid var(--ring); } 
+
+    /* Card = same box language as chips/action-pill */ 
+    .action-card{ 
+      display:flex; flex-direction:column; gap:6px; 
+      align-items:center; justify-content:center; 
+      padding:12px 12px; 
+      min-height:86px; 
+      border-radius:16px; 
+      background:var(--card); 
+      border:1px solid var(--ring); 
+      box-shadow:var(--shadow); 
+      color:var(--text); 
+      font-weight:800; 
+      transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease, background-color .15s ease; 
+    } 
+    /* Dark mode inherits same card color — no special override needed */ 
+    html[data-theme="dark"] .action-card{ background:var(--card); border-color:var(--ring); } 
+    /* Subtle hover to match your chips/buttons */ 
+    .action-card:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.14); border-color:rgba(249,115,22,.35); background:rgba(249,115,22,.06); } 
+    html[data-theme="dark"] .action-card:hover{ background:rgba(249,115,22,.12); } 
+    /* Icon + label typography = site-wide sizes */ 
+    .action-card span:first-child{ font-size:22px; line-height:1; } 
+    .action-card small{ font-size:12px; letter-spacing:.2px; } 
+
+    .sheet-sec{padding:12px 14px} 
+    .checkin-wrap{padding:12px 14px;border-top:1px solid var(--ring)} 
+    .checkin-btn{width:100%;border:none;border-radius:999px;padding:14px 18px;background:var(--accent);color:#000;font-weight:900;box-shadow:0 8px 20px rgba(249,115,22,.35);cursor:pointer} 
+    .checkin-btn.done{background:#16a34a;color:#fff;box-shadow:0 8px 20px rgba(22,163,74,.35)} 
+
+    /* Comfortable hit area on touch */ 
+    button, .chip, .fav-btn, .side-cta, .pop-more { min-height:44px; }
+    #detailSheet button, #modalOverlay button, .side-list .side-cta { min-height:44px; }
+    img{ max-width:100%; height:auto; } 
+    #map{ touch-action: pan-x pan-y; } 
+
+    @media (max-width: 420px){ 
+      .action-pill{ padding:6px 10px; font-size:14px; } 
+      .searchbar{ max-width: unset; } 
+      .side-item{ grid-template-columns: 1fr; gap:10px; } 
+      .side-thumb{ width:64px; height:64px; } 
+    } 
+
+    /* ===== MOBILE APP LAYOUT (phones) ===== */ 
+    @media (max-width: 600px){ 
+      :root{ --topbar-h: 52px; --gap-top: 8px; } 
+
+      /* Top bar */ 
+      #navbar{ height:var(--topbar-h); padding:0 8px; backdrop-filter: blur(10px); } 
+      .brand{ font-size:20px; padding-left:2px; } 
+      .searchbar{ min-width:0; max-width:100%; padding:4px; border-radius:12px; } 
+      .search-seg{ padding:8px 10px; } 
+      .seg-icon{ width:18px; height:18px; font-size:12px; } 
+
+      /* Compact action pills (icon only) */ 
+      .right-actions{ gap:6px; } 
+      .action-pill{ padding:8px 10px; } 
+      .action-pill span:last-child{ display:none; } 
+
+      /* Drawer behavior */ 
+      #sidebar{ width:86vw; max-width:86vw; border-radius:0 14px 14px 0; box-shadow:0 12px 28px rgba(0,0,0,.36); transform:translateX(-102%); } 
+      body.side-collapsed #sidebar{ transform:translateX(-102%); } 
+      body:not(.side-collapsed) #sidebar{ transform:translateX(0); } 
+
+      /* Map height = full screen minus top bar & safe area */ 
+      #map{ top: calc(var(--topbar-h) + var(--gap-top)); height: calc(100dvh - var(--topbar-h) - var(--gap-top) - env(safe-area-inset-bottom,0px)); border-radius:8px; } 
+
+      /* Floating locate button */ 
+      .locate-btn{
+        top: calc(var(--topbar-h) + var(--gap-top) + 10px);
+        right:14px;
+        width:52px; height:52px; border-radius:14px;
+        display:grid; place-items:center;   /* ✅ center icon inside box on mobile */
+        text-align:center; line-height:1; padding:0;
+      }
+
+      /* Bottom nav */ 
+      #bottomNav{ 
+        position:fixed; left:0; right:0; bottom:0; 
+        height:56px; 
+        display:grid; grid-template-columns:repeat(3,1fr); 
+        background:var(--card); color:var(--text); 
+        border-top:1px solid var(--ring); 
+        z-index:1200; 
+        padding-bottom:env(safe-area-inset-bottom,0px); 
+      } 
+      #bottomNav button{
+  background:transparent; border:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  font-weight:800; gap:2px; min-height:56px;
+  cursor:pointer;
+  text-align:center; margin:0 auto; /* ✅ center horizontally */
+}
+ 
+      #bottomNav small{ font-size:10px; opacity:.85 } 
+    } 
+
+    /* Hide mobile-only UI on desktop */ 
+    @media (min-width: 601px){ #menuBtn, #mobileMenu, #bottomNav { display: none !important; } }
+ 
+
+    /* --- Ribbon list tweaks --- */ 
+    /* Remove any leftover spacing for the deleted thumbnail */ 
+    .side-thumb{ display:none !important; } 
+
+    /* Smaller tags under prices */ 
+    .side-meta .meta-pill{ font-size:11px; padding:4px 8px; border-radius:999px; } 
+
+    /* Reserve space for heart (top-right) and Show (bottom-right) */ 
+    .side-item{ position: relative; grid-template-columns: 1fr; padding-right: 16px; min-height: 220px; /* reserve vertical space cleanly */ } 
+
+    /* Make each list card single-column, and RESERVE space for the Show button */ 
+    .side-main{ gap:6px; padding-right:110px; } /* protects right edge */ 
+    .side-item .side-cta{ position:absolute; right:16px; bottom:16px; } 
+
+    /* Remove any leftover spacing for the deleted thumbnail */ 
+    .side-thumb{ display:none !important; } 
+
+    /* Prices: keep on ONE line */ 
+    /* force one row and give pills natural width */ 
+    .side-prices{ display:flex !important; gap:8px !important; align-items:center !important; flex-wrap:nowrap !important; white-space:nowrap !important; overflow:visible !important; } 
+    .side-prices .price-pill{ flex:1 1 0; min-width:0; text-align:center; white-space:nowrap; padding:6px 8px; border-radius:12px; font-weight:800; } 
+
+    /* Tags smaller, sit right under the prices and wrap nicely */ 
+    .side-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } 
+   .side-meta .meta-pill{ font-size:11px; padding:4px 8px; border-radius:999px; }
+.side-meta .meta-pill{ background:var(--chip); color:var(--chipText); border:1px solid var(--ring); box-shadow:none; }
+.side-meta .meta-pill.is-on{
+  background:rgba(249,115,22,.16); border-color:rgba(249,115,22,.35); box-shadow:0 6px 16px rgba(249,115,22,.20);
+}
+html[data-theme="dark"] .side-meta .meta-pill.is-on{
+  background:rgba(249,115,22,.12); border-color:rgba(249,115,22,.35);
+}
+
+ 
+
+    /* Heart top-right */ 
+    .side-item .fav-btn{ position:absolute; top:12px; right:12px; margin:0; width:32px; height:32px; } 
+
+    /* "Show" bottom-right */ 
+    .side-item .side-cta{ position:absolute; right:16px; bottom:16px; } 
+
+    /* Optional: slightly tighter vertical rhythm in the main area */ 
+    .side-main{ gap:6px; padding-right:110px; } /* leave room for Show button */ 
+
+  </style> 
+</head> 
+<body class="side-collapsed"> 
+
+<!-- ===== Topbar (identical to the other pages; includes Filter) ===== -->
+<div id="navbar">
+  <div class="nav-inner">
+    <div class="brand" aria-label="Dönerd">
+      <span class="dot"></span><span>Dönerd</span>
+    </div>
+
+    <div class="searchbar" role="group" aria-label="Primary actions">
+      <div class="search-seg" id="seg-looking">
+  <span class="seg-icon" aria-hidden="true">🏠</span>
+  <label class="seg-input" for="searchInput">
+    <input id="searchInput" type="text" data-i18n-placeholder="searchPH"
+           placeholder="Suche nach Name, Straße, Tags … (z.B. falafel, scharf)"
+           aria-label="Kebab-Läden suchen" aria-autocomplete="list" aria-expanded="false" aria-controls="searchSuggest" />
+  </label>
+  <div id="searchSuggest" class="search-suggest" role="listbox" aria-label="Suchvorschläge"></div>
+</div>
+
+    </div>
+
+    <div class="right-actions">
+      <!-- Filter (replaces 'Karte') -->
+      <button class="action-pill" id="filterBtn" title="Filter">
+        <span class="action-icon">⚙️</span><span>Filter</span>
+      </button>
+
+      <a class="action-pill" href="selection.html" title="Preisliste">
+        <span class="action-icon">📋</span><span>Preisliste</span>
+      </a>
+
+      <a class="action-pill" href="add-shop.html" title="Shop hinzufügen">
+        <span class="action-icon">➕</span><span>Shop hinzufügen</span>
+      </a>
+
+      <a class="action-pill" href="feedback.html" title="Feedback">
+        <span class="action-icon">💬</span><span>Feedback</span>
+      </a>
+
+      <a class="action-pill" href="about.html" title="Über den Gründer">
+        <span class="action-icon">👤</span><span>Über den Gründer</span>
+      </a>
+
+      <button class="action-pill" id="themeBtn" title="Theme">
+        <span class="action-icon" id="themeIcon">🌙</span><span id="themeText">Dunkel</span>
+      </button>
+
+      <div class="dropdown" id="loginDrop">
+        <button class="action-pill" id="loginBtn" title="Login">
+          <span class="action-icon">🔑</span><span id="loginText">Login</span>
+        </button>
+        <div class="dropdown-menu hidden" id="loginMenu" role="menu" aria-hidden="true">
+          <a href="profile.html" id="menuProfile">👤 <span>Profil</span></a>
+          <button id="logoutBtn">↩︎ <span>Logout</span></button>
+        </div>
+      </div>
+
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <!-- Mobile: hamburger + dropdown live inside navbar -->
+<button id="menuBtn" aria-haspopup="true" aria-expanded="false" title="Menu">Menü</button>
+<div id="mobileMenu" role="menu" aria-label="Mobile Menu" class="hidden" aria-hidden="true">
+  <div class="menu-group" aria-label="Navigation">
+    <button class="menu-item" id="mobileFilter">⚙️ <span>Filter</span></button>
+    <a class="menu-item" href="selection.html">📋 <span>Preisliste</span></a>
+    <a class="menu-item" href="add-shop.html">➕ <span>Shop hinzufügen</span></a>
+    <a class="menu-item" href="feedback.html">💬 <span>Feedback</span></a>
+    <a class="menu-item" href="about.html">👤 <span>Über den Gründer</span></a>
+  </div>
+  <div class="menu-group" aria-label="Account">
+    <button class="menu-item" id="mobileLoginItem">🔑 <span>Login / Profil</span></button>
+    <button class="menu-item" id="mobileTheme">🌓 <span id="mobileThemeText">Dunkel</span></button>
+  </div>
+  <div class="menu-group" aria-label="Language">
+    <div class="menu-item" style="justify-content:space-between">
+      <span>🌐 <span>Sprache</span></span>
+      <div class="lang-toggle" role="group" aria-label="Language in menu">
+        <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    </div>
+  </div>
+</div>
+
+
+  <!-- ===== LEFT SIDEBAR ===== --> 
+  <div id="sidebar" aria-label="Preisliste"> 
+    <div class="side-header"> 
+      <div class="side-title" data-i18n="sidebar.title">Preisliste</div> 
+      <div style="margin-left:auto"></div> 
+      <button id="sideHide" class="action-pill" title="Verbergen"><span class="action-icon">⬅️</span><span data-i18n="sidebar.hide">Schließen</span></button> 
+    </div> 
+
+    <div class="side-controls side-controls--compact"> 
+      <div class="side-hint"> 
+        <span id="sideMatchCount">—</span> 
+      </div> 
+      <button id="openFilters" class="action-pill" title="Filter öffnen"> 
+        <span class="action-icon">⚙️</span><span data-i18n="nav.filter">Filter</span> 
+      </button> 
+    </div> 
+
+    <div id="sideList" class="side-list" role="list"></div> 
+  </div> 
+  <button id="sideTab" title="Preisliste"><span>📋</span></button> 
+
+  <!-- ===== Map & Geo ===== --> 
+  <div id="map"></div> 
+  <button class="locate-btn" id="locateBtn" title="Meine Position">📍</button> 
+
+  <!-- ===== Empty overlay ===== --> 
+  <div id="emptyOverlay" class="empty hidden" aria-live="polite"> 
+    <b>😕</b><span id="emptyText">Keine Treffer. Filter zurücksetzen?</span> 
+    <button id="emptyReset" class="btn">Reset</button> 
+  </div> 
+
+  <!-- ===== Filter Modal (NEW LOOK, same IDs) ===== --> 
+  <div id="modalOverlay"> 
+    <div id="modal" role="dialog" aria-modal="true" aria-labelledby="filterTitle"> 
+      <div class="modal-header filter-header"> 
+        <div class="header-left"> 
+          <div id="filterTitle" class="modal-title" data-i18n="modal.title">Filter</div> 
+          <div class="subtle" data-i18n="modal.subtitle">Feinjustiere deine Suche nach Tag, Kategorie und Preis.</div> 
+        </div> 
+        <div class="header-right"> 
+          <div class="match-badge"> 
+            <span class="dot">●</span> 
+            <span id="matchHint">–</span> 
+          </div> 
+          <button class="modal-reset" id="resetBtn" data-i18n="modal.clear">Löschen</button> 
+        </div> 
+      </div> 
+
+      <div class="filter-sections"> 
+        <!-- Quick categories --> 
+        <section class="filter-section"> 
+          <h4 class="section-title" data-i18n="rec.title">Für dich empfohlen</h4> 
+          <div class="chip-grid"> 
+            <label class="chip chip-lg"> 
+              <input type="checkbox" id="vegOnly"> 
+              <span class="chip-emoji">🥬</span><span data-i18n="cat.veg">Vegetarisch</span> 
+            </label> 
+            <label class="chip chip-lg"> 
+              <input type="checkbox" id="meatOnly"> 
+              <span class="chip-emoji">🍖</span><span data-i18n="cat.meat">Fleisch</span> 
+            </label> 
+            <label class="chip chip-lg"> 
+              <input type="checkbox" id="saucesOnly"> 
+              <span class="chip-emoji">🥫</span><span data-i18n="cat.sauces">Saucen</span> 
+            </label> 
+            <label class="chip chip-lg"> 
+              <input type="checkbox" id="breadOnly"> 
+              <span class="chip-emoji">🥖</span><span data-i18n="cat.bread">Brot hausgemacht</span> 
+            </label> 
+            <label class="chip chip-lg"> 
+              <input type="checkbox" id="cardOnly"> 
+              <span class="chip-emoji">💳</span><span data-i18n="popup.tags.cards">Card payment</span> 
+            </label> 
+          </div> 
+
+          <!-- auto-filled sub-chips (keeps same IDs so your JS works) --> 
+          <div class="subchips"> 
+            <div id="vegSub" class="chip-row hidden"></div> 
+            <div id="meatSub" class="chip-row hidden"></div> 
+            <div id="sauceSub" class="chip-row hidden"></div> 
+          </div> 
+        </section> 
+
+        <!-- Weekday --> 
+        <section class="filter-section" id="prodSection"> 
+          <h4 class="section-title">Products &amp; price</h4> 
+          <!-- choose product(s) first --> 
+          <div class="chip-grid" id="prodChips"> 
+            <label class="chip chip-lg"><input type="checkbox" id="prodK"><span class="chip-emoji">🥙</span><span data-i18n="popup.kebap">Kebap</span></label> 
+            <label class="chip chip-lg"><input type="checkbox" id="prodD"><span class="chip-emoji">🌯</span><span data-i18n="popup.durum">Dürüm</span></label> 
+            <label class="chip chip-lg"><input type="checkbox" id="prodB"><span class="chip-emoji">📦</span><span data-i18n="popup.box">Kebab Box</span></label> 
+          </div> 
+
+          <!-- price sliders appear only when their product chip is on --> 
+          <div class="card-grid" style="margin-top:8px"> 
+            <div class="slider-card hidden" id="pKwrap"> 
+              <div class="slider-head"><span>🥙 <b data-i18n="price.kebap">Kebap €</b></span><span class="slider-value" id="priceKLabel">—</span></div> 
+              <input id="priceKMax" class="slider" type="range" min="2" max="10" step="0.1"> 
+            </div> 
+            <div class="slider-card hidden" id="pDwrap"> 
+              <div class="slider-head"><span>🌯 <b data-i18n="price.durum">Dürüm €</b></span><span class="slider-value" id="priceDLabel">—</span></div> 
+              <input id="priceDMax" class="slider" type="range" min="2" max="12" step="0.1"> 
+            </div> 
+            <div class="slider-card hidden" id="pBwrap"> 
+              <div class="slider-head"><span>📦 <b data-i18n="price.box">Kebab Box €</b></span><span class="slider-value" id="priceBLabel">—</span></div> 
+              <input id="priceBMax" class="slider" type="range" min="2" max="14" step="0.1"> 
+            </div> 
+          </div> 
+
+          <!-- (optional) delete this line; JS also hides it --> 
+          <div class="subtle" id="priceHint" style="margin-top:6px">–</div> 
+        </section> 
+
+        <section class="filter-section" id="hoursSection"> 
+          <h4 class="section-title">Opening hours</h4> 
+          <div class="chip-grid"> 
+            <label class="chip chip-lg"><input type="checkbox" id="openNow"><span class="chip-emoji">🟢</span><span>Open now</span></label> 
+            <label class="chip chip-lg" style="gap:8px"> 
+              <input type="checkbox" id="openAt"> 
+              <span class="chip-emoji">⏰</span><span>Open at</span> 
+              <input type="time" id="openAtTime" style="margin-left:6px;padding:6px 8px;border:1px solid var(--ring); border-radius:10px;background:transparent;color:var(--text)"> 
+            </label> 
+            <!-- NEW: liked shops filter --> 
+            <label class="chip chip-lg"><input type="checkbox" id="likedOnly"><span class="chip-emoji">❤️</span><span>Liked shops</span></label> 
+          </div> 
+          <small class="subtle">Tip: use weekday chips to pick the day.</small> 
+        </section> 
+      </div> 
+
+      <div class="filter-footer"> 
+        <button id="applyBtn" class="apply-btn" data-i18n="modal.apply">Anwenden</button> 
+      </div> 
+    </div> 
+  </div>
+  <!-- ===== Bottom Sheet (detail view) ===== -->
+  <div id="detailOverlay" aria-hidden="true">
+    <div id="detailSheet">
+      <div class="sheet-head">
+        <div style="flex:1">
+          <div class="sheet-title" id="dTitle">–</div>
+          <div class="sheet-sub" id="dAddr">–</div>
+        </div>
+        <button id="dClose" class="action-pill"><span class="action-icon">✖️</span><span>Close</span></button>
+      </div>
+      <div class="sheet-hero" id="dHero"></div>
+      <div class="actions-row">
+        <div class="action-card" id="dShare"><span>📤</span><small>Share</small></div>
+        <div class="action-card" id="dDir"><span>🧭</span><small>Directions</small></div>
+        <div class="action-card" id="dRate"><span>⭐</span><small>Rate</small></div>
+        <div class="action-card" id="dCopy"><span>🔗</span><small>Copy Link</small></div>
+      </div>
+      <div class="sheet-sec" id="dPrices"></div>
+      <!-- Opening hours (new pretty card) -->
+      <div class="sheet-sec" id="dHours"></div>
+      <!-- (optional: keep the old day chips if you want – we’ll blank them in JS) -->
+      <div class="sheet-sec" id="dDays"></div>
+      <div class="sheet-sec" id="dCategories"></div>
+      <!-- NEW -->
+      <div class="checkin-wrap"><button id="dCheckin" class="checkin-btn">➡️ Check-in</button></div>
+    </div>
+</div>
+        <!-- Settings / Edit Modal -->
+    <div id="editOverlay" aria-hidden="true">
+      <div id="editModal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+        <div class="rate-head">
+          <div class="rate-title" id="editTitle">⚙️ <span id="editTitleText" data-i18n="edit.title">Einstellungen</span></div>
+
+          <button class="rev-close" id="editClose">✖️</button>
+        </div>
+        <div class="edit-body">
+          <div class="grid3">
+            <div class="edit-row"><label>🥙 Kebap €</label><input id="eK" class="edit-input" type="number" step="0.1" inputmode="decimal"></div>
+            <div class="edit-row"><label>🌯 Dürüm €</label><input id="eD" class="edit-input" type="number" step="0.1" inputmode="decimal"></div>
+            <div class="edit-row"><label>📦 Box €</label><input id="eB" class="edit-input" type="number" step="0.1" inputmode="decimal"></div>
+          </div>
+
+          <div class="chip-row" style="margin:10px 0">
+  <label class="chip"><input type="checkbox" id="eVeg"><span>🥬 Vegetarisch</span></label>
+  <label class="chip"><input type="checkbox" id="eMeat"><span>🍖 Fleisch</span></label>
+  <label class="chip"><input type="checkbox" id="eSauces"><span>🥫 Saucen</span></label>
+  <label class="chip"><input type="checkbox" id="eBread"><span>🥖 Brot hausgemacht</span></label>
+  <label class="chip"><input type="checkbox" id="eCard"><span>💳 Kartenzahlung</span></label>
+</div>
+
+<!-- ▼ Subcategories editor (keeps IDs intact; adds new ones) -->
+<div class="edit-sec">
+  <h4 data-i18n="edit.subcats">Unterkategorien</h4>
+
+  <div class="edit-sec">
+    <div style="font-weight:800; margin-bottom:6px">🥬 <span data-i18n="cat.veg">Vegetarisch</span></div>
+    <div id="eVegTypes" class="chip-wrap"></div>
+    <div class="tag-adder">
+      <input id="eVegAdd" type="text" placeholder="z.B. Falafel, Halloumi">
+      <button id="eVegAddBtn">＋</button>
+    </div>
+    <div class="edit-help" data-i18n="edit.help">Aktiviere/entferne Tags oder füge neue hinzu.</div>
+  </div>
+
+  <div class="edit-sec">
+    <div style="font-weight:800; margin-bottom:6px">🍖 <span data-i18n="cat.meat">Fleisch</span></div>
+    <div id="eMeatTypes" class="chip-wrap"></div>
+    <div class="tag-adder">
+      <input id="eMeatAdd" type="text" placeholder="z.B. Kalb, Hähnchen">
+      <button id="eMeatAddBtn">＋</button>
+    </div>
+  </div>
+
+  <div class="edit-sec">
+    <div style="font-weight:800; margin-bottom:6px">🥫 <span data-i18n="cat.sauces">Saucen</span></div>
+    <div id="eSauceTypes" class="chip-wrap"></div>
+    <div class="tag-adder">
+      <input id="eSauceAdd" type="text" placeholder="z.B. Knoblauch, Scharf">
+      <button id="eSauceAddBtn">＋</button>
+    </div>
+  </div>
+</div>
+
+
+          <div class="days">
+            <div class="edit-row"><label>Mo</label><input id="eMon" class="edit-input" placeholder="11:00-19:00, 22:00-02:00"></div>
+            <div class="edit-row"><label>Di</label><input id="eTue" class="edit-input" placeholder="11:00-19:00"></div>
+            <div class="edit-row"><label>Mi</label><input id="eWed" class="edit-input" placeholder="11:00-19:00"></div>
+            <div class="edit-row"><label>Do</label><input id="eThu" class="edit-input" placeholder="11:00-19:00"></div>
+            <div class="edit-row"><label>Fr</label><input id="eFri" class="edit-input" placeholder="11:00-20:00"></div>
+            <div class="edit-row"><label>Sa</label><input id="eSat" class="edit-input" placeholder="12:00-20:00"></div>
+            <div class="edit-row"><label>So</label><input id="eSun" class="edit-input" placeholder="12:00-18:00"></div>
+          </div>
+
+          <div class="rate-actions">
+            <button class="rate-btn rate-cancel" id="editCancel">Abbrechen</button>
+            <button class="rate-btn rate-submit" id="editSave">Speichern</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supabase & Leaflet -->
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+    <!-- ========= i18n ========= -->
+    <script>
+      const DICTS = {
+        de: {
+          nav:{filter:"Filter", add:"Shop hinzufügen", feedback:"Feedback", selection:"Preisliste", about:"Über mich"},
+  edit:{title:"Einstellungen", subcats:"Unterkategorien", help:"Aktiviere/entferne Tags oder füge neue hinzu."},
+            searchPH:"Suche nach Name, Straße, Tags … (z.B. falafel, scharf)",
+          modal:{title:"Filter", clear:"Löschen", apply:"Anwenden", subtitle:"Feinjustiere deine Suche nach Tag, Kategorie und Preis."},
+          rec:{title:"Für dich empfohlen"},
+          weekday:{title:"Wochentag", mon:"Montag", tue:"Dienstag", wed:"Mittwoch", thu:"Donnerstag", fri:"Freitag", sat:"Samstag", sun:"Sonntag"},
+          cat:{title:"Kategorie", veg:"Vegetarisch", meat:"Fleisch", sauces:"Saucen", bread:"Brot hausgemacht"},
+          price:{title:"Max-Preis", kebap:"Kebap €", durum:"Dürüm €", box:"Kebab Box €"},
+          popup:{tags:{veg:"Vegetarisch",meat:"Fleisch",sauces:"Saucen",bread:"Brot hausgemacht",cards:"Kartenzahlung"}, priceTitle:"Preise:",days:"Tage",kebap:"Kebap",durum:"Dürüm",box:"Kebab Box",noaddr:"Keine Adresse", rating:"Bewertung"},
+          daysMap:{mon:"Montag",tue:"Dienstag",wed:"Mittwoch",thu:"Donnerstag",fri:"Freitag",sat:"Samstag",sun:"Sonntag"},
+          sidebar:{title:"Preisliste", reset:"Reset", hide:"Schließen"},
+          sort:{none:"Keine Sortierung", kAsc:"Kebap ↑", kDesc:"Kebap ↓", dAsc:"Dürüm ↑", dDesc:"Dürüm ↓", bAsc:"Kebab Box ↑", bDesc:"Kebab Box ↓", rAsc:"Rating ↑", rDesc:"Rating ↓"},
+          empty:"Keine Treffer. Filter zurücksetzen?",
+          hints:{range:"Spanne: Kebap {kmin}–{kmax}, Dürüm {dmin}–{dmax}, Box {bmin}–{bmax}", matches:"Treffer: {n}"}
+        },
+        en: {
+          av:{filter:"Filter", add:"Add Shop", feedback:"Feedback", selection:"Price list", about:"About me"},
+  edit:{title:"Settings", subcats:"Subcategories", help:"Toggle/remove tags or add new ones."},
+  
+          searchPH:"Search by name, street, tags … (e.g., falafel, spicy)",
+          modal:{title:"Filter", clear:"Clear", apply:"Apply", subtitle:"Fine-tune your search by day, category and price."},
+          rec:{title:"Recommended for you"},
+          weekday:{title:"Weekday", mon:"Monday", tue:"Tuesday", wed:"Wednesday", thu:"Thursday", fri:"Friday", sat:"Saturday", sun:"Sunday"},
+          cat:{title:"Category", veg:"Vegetarian", meat:"Meat", sauces:"Sauces", bread:"Homemade bread"},
+          price:{title:"Max price", kebap:"Kebap €", durum:"Durum €", box:"Kebab Box €"},
+          popup:{tags:{veg:"Vegetarian",meat:"Meat",sauces:"Sauces",bread:"Homemade bread",cards:"Card payment"}, priceTitle:"Prices:",days:"Days",kebap:"Kebap",durum:"Durum",box:"Kebab Box",noaddr:"No address", rating:"Rating"},
+          daysMap:{mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday",sat:"Saturday",sun:"Sunday"},
+          sidebar:{title:"Price list", reset:"Reset", hide:"Hide"},
+          sort:{none:"No sort", kAsc:"Kebap ↑", kDesc:"Kebap ↓", dAsc:"Durum ↑", dDesc:"Durum ↓", bAsc:"Kebab Box ↑", bDesc:"Kebab Box ↓", rAsc:"Rating ↑", rDesc:"Rating ↓"},
+          empty:"No results. Reset filters?",
+          hints:{range:"Range: Kebap {kmin}–{kmax}, Durum {dmin}–{dmax}, Box {bmin}–{bmax}", matches:"Matches: {n}"}
+        }
+      };
+
+      const I18N = (() => {
+        let lang='de', handlers=[];
+        const get=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k]!=null?a[k]:undefined,o);
+        function t(k,fb){
+          const v=get(DICTS[lang],k);
+          return v==null?(fb??k):v;
+        }
+        function day(code){
+          return (DICTS[lang].daysMap||{})[String(code).toLowerCase()] || code;
+        }
+        function applyTexts(){
+          document.querySelectorAll('.lang-toggle [data-lang]').forEach(b=>{
+            const on=b.dataset.lang===lang;
+            b.classList.toggle('is-active',on);
+            b.setAttribute('aria-pressed',on?'true':'false');
+          });
+          const setLabel=(id,key)=>{
+            const el=document.querySelector(`#${id} span:last-child`);
+            if(el) el.textContent=t(key,el.textContent?.trim());
+          };
+          setLabel('filterBtn','nav.filter');
+          document.querySelectorAll('[data-i18n]').forEach(el=> el.textContent = t(el.dataset.i18n, el.textContent));
+          document.querySelectorAll('#sideSort option').forEach(opt=>{
+            const k=opt.getAttribute('data-i18n');
+            if(k) opt.textContent = t(k, opt.textContent);
+          });
+          const si=document.getElementById('searchInput');
+          if(si) si.placeholder=t('searchPH', si.placeholder);
+          document.getElementById('emptyText').textContent = t('empty', 'No results.');
+          document.documentElement.lang=lang;
+        }
+        function set(l){
+          lang=(l==='en')?'en':'de';
+          localStorage.setItem('lang',lang);
+          applyTexts();
+          handlers.forEach(fn=>{
+            try{ fn(lang); }catch(_){ }
+          });
+        }
+        function init(){
+          const stored=localStorage.getItem('lang');
+          const browser=(navigator.language||'').slice(0,2);
+          set(stored || (['de','en'].includes(browser)?browser:'de'));
+          document.addEventListener('click', e=>{
+            const btn=e.target.closest('.lang-toggle [data-lang]');
+            if(btn) set(btn.dataset.lang);
+          });
+        }
+        function onChange(fn){ handlers.push(fn); }
+        function fmt(s,obj){ return String(s||'').replace(/\{(\w+)\}/g,(_,k)=> (obj&&k in obj)?obj[k]:''); }
+        return { init, t, day, onChange, fmt };
+      })();
+
+      document.addEventListener('DOMContentLoaded', I18N.init);
+// keep edit modal i18n in sync (title text lives under data-i18n)
+I18N.onChange(()=>{/* no-op: data-i18n auto-updates via applyTexts */});
+
+      function togglePassword(inputId, btnId){
+        const input = document.getElementById(inputId);
+        const btn = document.getElementById(btnId);
+        if (input && btn){
+          btn.addEventListener('click', ()=>{
+            input.type = input.type === 'password' ? 'text' : 'password';
+          });
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', ()=>{
+        const pairs = [
+          ['authPassword', 'toggleLoginPassword'],
+          ['signupPassword', 'toggleSignupPassword'],
+          ['signupPassword2','toggleSignupPassword2']
+        ];
+        for (const [inputId, btnId] of pairs){
+          const input = document.getElementById(inputId);
+          const btn = document.getElementById(btnId);
+          if (input && btn){
+            btn.type = 'button';
+            btn.addEventListener('click', (e)=>{
+              e.preventDefault();
+              input.type = input.type === 'password' ? 'text' : 'password';
+            });
+          }
+        }
+      });
+    </script>
+
+    <!-- ========= Map, Cluster & UI Logic ========= -->
+    <script>
+      // === Auth + favorites state (FIXED) ===
+      const SUPABASE_URL = 'https://bcxeaxhhhvagpvomtsyi.supabase.co';
+      const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGVheGhoaHZhZ3B2b210c3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTUxMzcsImV4cCI6MjA3MDgzMTEzN30.HCnWgapZrDY4RIgdXM5eh2UkslFpSSuJwEUszZHtp0w';
+      const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+      let currentUser = null;
+let isModerator = false; // 🔐 fetched from profiles.is_moderator
+let myFavs = new Set();
+
+
+      async function loadFavorites(){
+        if (!currentUser) { myFavs.clear(); return; }
+        const { data, error } = await supa
+          .from('favorites')
+          .select('shop_id')
+          .eq('user_id', currentUser.id); // ✅ scope to current user
+        if (!error && Array.isArray(data)) {
+          myFavs = new Set(data.map(r => String(r.shop_id)));
+        }
+      }
+
+    
+
+      function invalidateAfterFrame(delay=0){
+        if(!window.map) return;
+        requestAnimationFrame(()=> setTimeout(()=> window.map.invalidateSize(), delay));
+      }
+      window.addEventListener('resize', ()=> invalidateAfterFrame(50));
+      window.addEventListener('orientationchange', ()=> invalidateAfterFrame(150));
+
+      // ===== AUTH UI (Email + Password + GitHub) – FIXED =====
+      // open/close login
+      document.addEventListener('DOMContentLoaded', () => {
+        
+  const loginBtn = document.getElementById('loginBtn');
+  const loginText = document.getElementById('loginText');
+  const authOv = document.getElementById('authOverlay');
+  
+  const loginDrop = document.getElementById('loginDrop');
+  const loginMenu = document.getElementById('loginMenu');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  
+  // === ADD THESE ===
+  const menuBtn = document.getElementById('menuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  const mobileFilter = document.getElementById('mobileFilter');
+  const mobileTheme = document.getElementById('mobileTheme');
+  const mobileThemeText = document.getElementById('mobileThemeText');
+  const mobileLoginItem = document.getElementById('mobileLoginItem');
+
+
+// close on outside click
+document.addEventListener('click', (ev) => {
+  if (!loginDrop) return;
+  if (!loginDrop.contains(ev.target)) {
+    loginMenu?.classList.add('hidden');
+    loginMenu?.setAttribute('aria-hidden','true');
+  }
+});
+
+// close on ESC
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') {
+    loginMenu?.classList.add('hidden');
+    loginMenu?.setAttribute('aria-hidden','true');
+  }
+});
+
+// logout
+logoutBtn?.addEventListener('click', async () => {
+  await supa.auth.signOut();
+  loginMenu?.classList.add('hidden');
+  loginMenu?.setAttribute('aria-hidden','true');
+});
+
+
+        function openAuth(){
+          if(!authOv) return;
+          if(authErr){ authErr.textContent = ''; authErr.style.color = ''; }
+          if(authEmail) authEmail.value = '';
+          if(authPass) authPass.value = '';
+          authOv.style.display = 'flex';
+        }
+        function closeAuth(){ authOv.style.display = 'none'; }
+
+        loginBtn?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const { data } = await supa.auth.getUser();
+  const menu = document.getElementById('loginMenu');
+  if (data?.user) {
+    if (menu) {
+      const isHidden = menu.classList.contains('hidden');
+      menu.classList.toggle('hidden', !isHidden);
+      menu.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
+    }
+  } else {
+    openAuth();
+  }
+});
+
+// === NEW: mobile login/profile ===
+mobileLoginItem?.addEventListener('click', async () => {
+  const { data } = await supa.auth.getUser();
+  if (data?.user) {
+    window.location.href = 'profile.html';
+  } else {
+    openAuth();
+  }
+  // close mobile menu
+mobileMenu?.classList.add('hidden');
+mobileMenu?.setAttribute('aria-hidden','true');
+menuBtn?.setAttribute('aria-expanded','false');
+
+});
+
+
+
+        authClose?.addEventListener('click', closeAuth);
+        authOv?.addEventListener('click', (e)=>{
+          if(e.target===authOv) closeAuth();
+        });
+
+        btnGH?.addEventListener('click', async ()=> {
+          const redirectTo = location.origin;
+          await supa.auth.signInWithOAuth({
+            provider: 'github',
+            options: { redirectTo, scopes: 'read:user user:email' }
+          });
+        });
+
+        async function signInEmail(){
+          authErr.textContent = '';
+          const email = (authEmail.value||'').trim();
+          const password = authPass.value||'';
+          if (!email || !password) {
+            authErr.textContent = 'Bitte E-Mail und Passwort eingeben.';
+            return;
+          }
+          const { data: signInData, error } = await supa.auth.signInWithPassword({ email, password });
+          if (error) {
+            authErr.textContent = error.message;
+            return;
+          }
+          // Immediately reflect the new session in the UI
+          const { data: { session } } = await supa.auth.getSession();
+          await handleSession(session);
+          // Stay on the map: just close the modal
+          closeAuth();
+          // optional: tiny toast
+          try { showToast('✅ Eingeloggt'); } catch(_) {}
+        }
+        btnIn?.addEventListener('click', signInEmail);
+
+        // === Toast helper (top-level in this block is OK) ===
+        function showToast(msg, ms=4200){
+          const t = document.getElementById('donerdToast');
+          if(!t) return alert(msg);
+          t.textContent = msg;
+          t.classList.add('show');
+          setTimeout(()=> t.classList.remove('show'), ms);
+        }
+
+        // === Switch Login → Signup modal ===
+        const signupOv = document.getElementById('signupOverlay');
+        const signupClose = document.getElementById('signupClose');
+        const signupBtn = document.getElementById('signupSubmit');
+
+        document.getElementById('authSignUp')?.addEventListener('click', () => {
+          authOv.style.display = 'none';
+          signupOv.style.display = 'flex';
+        });
+        signupClose?.addEventListener('click', () => { signupOv.style.display = 'none'; });
+
+        // Password eye toggles for signup (you already have togglePassword globally)
+        togglePassword('signupPassword','toggleSignupPassword');
+        togglePassword('signupPassword2','toggleSignupPassword2');
+
+        // === Single SIGNUP flow ===
+        async function doSignup(){
+          const email = (document.getElementById('signupEmail').value||'').trim();
+          const password = document.getElementById('signupPassword').value||'';
+          const password2 = document.getElementById('signupPassword2').value||'';
+          const first = document.getElementById('signupName').value||'';
+          const last = document.getElementById('signupSurname').value||'';
+          const age = parseInt(document.getElementById('signupAge').value,10)||null;
+          const err = document.getElementById('authErrorSignup');
+          err.style.color = '#ef4444'; // red by default
+          err.textContent = '';
+
+          if(!email || !password || !password2 || !first || !last || !age){
+            err.textContent = 'Alle Felder ausfüllen.';
+            return;
+          }
+          if(password !== password2){
+            err.textContent = 'Passwörter stimmen nicht überein.';
+            return;
+          }
+
+          const { data, error } = await supa.auth.signUp({
+            email, password,
+            options: { data: { first_name:first, last_name:last, age } }
+          });
+          if(error){ err.textContent = error.message; return; }
+
+          // NOTE: With email confirmation ON, there is usually no active session yet.
+          // Writing to your 'profiles' table from the client may fail due to RLS.
+          // Keep it simple: show confirm toast and close the signup modal.
+          err.style.color = '#16a34a';
+          err.textContent = 'Registriert. Bitte E-Mail bestätigen.';
+          signupOv.style.display = 'none';
+          showToast('📨 Bitte bestätige deine E-Mail. Danach kannst du dich einloggen.');
+        }
+        signupBtn?.addEventListener('click', doSignup);
+      });
+
+      // Keep your existing session bootstrap but update setUser to show the name
+      // ===== Session bootstrap (single) – FIXED =====
+      async function handleSession(session){
+        const user = session?.user ?? null;
+        // Optional profile upsert (safe if table exists)
+        if (user) {
+          try {
+            const display = user.user_metadata?.user_name || user.user_metadata?.full_name || (user.email ? user.email.split('@')[0] : 'User');
+            await supa.from('profiles').upsert(
+              { id: user.id, display_name: display },
+              { onConflict: 'id' }
+            );
+          } catch (e) { /* ignore */ }
+        }
+        await setUser(user);
+      }
+
+      (async () => {
+        const { data: { session } } = await supa.auth.getSession();
+        await handleSession(session);
+        supa.auth.onAuthStateChange(async (_event, session) => {
+          await handleSession(session); // updates button + favorites immediately
+        });
+      })();
+
+      // Your setUser gets a tiny enhancement to show the name
+     async function setUser(user){
+  currentUser = user;
+
+  const btn = document.getElementById('loginBtn');
+  const txt = document.getElementById('loginText');
+
+  // always hide dropdown when state changes
+  const menu = document.getElementById('loginMenu');
+  if (menu) { menu.classList.add('hidden'); menu.setAttribute('aria-hidden','true'); }
+
+  if (user) {
+  const md = user.user_metadata || {};
+  const first =
+    md.first_name ||
+    (md.full_name ? String(md.full_name).split(' ')[0] : '') ||
+    md.user_name ||
+    (user.email ? String(user.email).split('@')[0] : 'User');
+
+  btn.title = 'Profil';
+  txt.textContent = `Hi, ${first}`;
+
+  // 🔐 fetch moderator flag
+  try{
+    const { data: prof } = await supa.from('profiles')
+      .select('is_moderator').eq('id', user.id).single();
+    isModerator = !!(prof && prof.is_moderator);
+  }catch(_){ isModerator = false; }
+
+  await loadFavorites();
+} else {
+  btn.title = 'Login';
+  txt.textContent = 'Login';
+  isModerator = false;
+  myFavs.clear();
+}
+
+
+  try { drawMarkers(); renderList(); } catch (_) {}
+}
+
+
+
+      // Keep your existing boot:
+      // (already present in your file)
+      // (async () => {
+      //   const { data: { session } } = await supa.auth.getSession();
+      //   await handleSession(session);
+      //   supa.auth.onAuthStateChange(async (_event, session) => {
+      //     await handleSession(session);
+      //   });
+      // })();
+
+      // ----- FAVORITES helpers should send user_id -----
+      async function toggleFavorite(shopId){
+        if(!currentUser){
+          alert(document.documentElement.lang==='de' ? 'Bitte einloggen, um Favoriten zu speichern.' : 'Please log in to save favorites.');
+          return;
+        }
+        const id = String(shopId);
+        if(myFavs.has(id)){
+          await supa.from('favorites')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq('shop_id', id);
+          myFavs.delete(id);
+        } else {
+          await supa.from('favorites')
+            .insert([{ user_id: currentUser.id, shop_id: id }]);
+          myFavs.add(id);
+        }
+        try{
+          drawMarkers();
+          renderList();
+        }catch(_){}
+      }
+
+
+      const markerById = new Map();
+
+      // ====== loader with audience+admin ratings ======
+      async function loadShops(){
+        const num = v => (Number.isFinite(Number(v)) ? Number(v) : undefined);
+        const asArrayMaybe = v => Array.isArray(v) ? v : (typeof v==='string' ? v.split(',').map(s=>s.trim()).filter(Boolean) : []);
+        function normalize(rows){
+          return (rows||[]).map((r,i)=>{
+            const rating_admin = num(r.rating_admin);
+            const rating_avg = num(r.rating_avg);
+            const rating_count = Number(r.rating_count || 0);
+            const rating_effective = Number.isFinite(r.rating_avg) ? r.rating_avg : (Number.isFinite(rating_admin) ? rating_admin : undefined);
+            return {
+  _id: r.id ?? r._id ?? r.slug ?? String(i),
+  name: r.name ?? '',
+  address: r.address ?? '',
+  lat: num(r.lat ?? r.latitude),
+  lng: num(r.lng ?? r.longitude),
+  verification_status: String(r.verification_status || 'unverified'),
+  is_imported: !!r.is_imported,
+  verified_by: r.verified_by || null,
+  verified_at: r.verified_at || null,
+  vegetarian: !!(r.vegetarian), // ✅ correct boolean from Supabase
+
+              meat: !!(r.meat),
+              sauces: !!(r.sauces),
+              homemade_bread: !!(r.homemade_bread ?? r.bread),
+              veg_types: asArrayMaybe(r.vegetarian_type),
+              meat_types: asArrayMaybe(r.meat_types),
+              sauce_types: asArrayMaybe(r.sauce_types ?? r.sauces_types ?? r.sauce_type),
+              card: !!(r.payment_cards), // ✅ NEW: map Supabase payment_cards → card
+              prices: {
+                kebap: num(r.price_kebap ?? r.kebap_price ?? r.price_kebab ?? r.kebab_price),
+                durum: num(r.price_durum ?? r.durum_price),
+                box: num(r.price_box ?? r.box_price)
+              },
+              opening_days: asArrayMaybe(r.opening_days),
+              opening_hours: (r.opening_hours && typeof r.opening_hours === 'object') ? r.opening_hours : null,
+              rating: rating_effective,
+              rating_admin,
+              rating_avg,
+              rating_count,
+              image_urls: Array.isArray(r.image_urls) ? r.image_urls : (r.image_urls ? [r.image_urls] : [])
+            };
+          }).filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
+        }
+
+        try{
+          const { data, error } = await supa.from('shops')
+  .select('id,name,address,lat,lng,vegetarian,meat,sauces,homemade_bread,payment_cards,price_kebap,price_durum,price_box,opening_days,opening_hours,image_urls,rating_admin,rating_avg,rating_count,vegetarian_type,meat_types,sauce_types,verification_status,is_imported,verified_by,verified_at');
+
+          if(error) throw error;
+          const mapped = normalize(data);
+          if (mapped.length) {
+            shops = mapped;
+            return;
+          }
+          const d = await fetch('shops.json').then(r=>r.json());
+          shops = normalize(d);
+        }catch(e){
+          console.warn('Supabase failed, using shops.json fallback:', e);
+          try{
+            const d = await fetch('shops.json').then(r=>r.json());
+            shops = normalize(d);
+          }catch(_){
+            shops = [];
+          }
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        // ==== THEME ====
+        const themeBtn = document.getElementById('themeBtn');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+        function applyTheme(mode){
+          document.documentElement.setAttribute('data-theme', mode);
+          localStorage.setItem('theme', mode);
+          themeIcon.textContent = mode==='dark' ? '🌞' : '🌙';
+          themeText.textContent = mode==='dark' ? 'Licht' : 'Dunkel';
+          if(window._lightTiles && window._darkTiles){
+            if(mode==='dark'){
+              map.removeLayer(_lightTiles); _darkTiles.addTo(map);
+            } else {
+              map.removeLayer(_darkTiles); _lightTiles.addTo(map);
+            }
+          }
+          invalidateAfterFrame(50);
+        }
+        const prefDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(localStorage.getItem('theme') || (prefDark?'dark':'light'));
+        [themeBtn, mobileTheme].forEach(btn=>{
+  btn?.addEventListener('click', ()=>{
+    const cur = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    applyTheme(cur);
+    // close mobile menu
+mobileMenu?.classList.add('hidden');
+mobileMenu?.setAttribute('aria-hidden','true');
+menuBtn?.setAttribute('aria-expanded','false');
+
+
+  });
+});
+
+
+        // Filter Modal refs
+        const modal=document.getElementById('modalOverlay');
+        const applyBtn=document.getElementById('applyBtn');
+        const resetBtn=document.getElementById('resetBtn');
+
+        const filterBtn = document.getElementById('filterBtn');
+[filterBtn, mobileFilter].forEach(btn=>{
+  btn?.addEventListener('click', ()=>{
+    modal.style.display='flex';
+    invalidateAfterFrame(50);
+    // close mobile menu after click
+   mobileMenu?.classList.add('hidden');
+mobileMenu?.setAttribute('aria-hidden','true');
+menuBtn?.setAttribute('aria-expanded','false');
+
+  });
+});
+
+
+
+
+        // ✅ put this at top-level (still inside the same DOMContentLoaded), not inside the filter click
+        document.getElementById('menuBtn')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  const mm = document.getElementById('mobileMenu');
+  if(!mm) return;
+  mm.classList.toggle('hidden');
+  const isHidden = mm.classList.contains('hidden');
+  e.currentTarget.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
+  mm.setAttribute('aria-hidden', isHidden ? 'true' : 'false');
+});
+
+
+
+        function openFilters(){
+  modal.style.display='flex';
+  document.body.classList.add('no-scroll');
+  invalidateAfterFrame(50);
+}
+function closeFilters(){
+  modal.style.display='none';
+  document.body.classList.remove('no-scroll');
+  invalidateAfterFrame(50);
+}
+
+applyBtn.addEventListener('click', ()=>{
+  closeFilters();
+  drawMarkers(); renderList();
+});
+
+resetBtn.addEventListener('click', ()=>{ resetAll(); });
+
+// close on overlay click (outside the sheet)
+document.getElementById('modalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modalOverlay') closeFilters();
+});
+
+// close on ESC
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && document.getElementById('modalOverlay').style.display==='flex'){
+    closeFilters();
+  }
+});
+
+// use unified opener
+[filterBtn, mobileFilter].forEach(b=> b?.addEventListener('click', openFilters));
+
+        // Inputs & chips
+        const vegChk=document.getElementById('vegOnly');
+        const meatChk=document.getElementById('meatOnly');
+        const saucesChk=document.getElementById('saucesOnly');
+        const breadChk=document.getElementById('breadOnly');
+        const cardChk = document.getElementById('cardOnly');
+        const vegSub = document.getElementById('vegSub');
+        const meatSub = document.getElementById('meatSub');
+        const sauceSub = document.getElementById('sauceSub');
+
+        // State: which sub-types are enabled (null = “all” for the checked main chip)
+        let selVeg = null, selMeat = null, selSauce = null;
+
+        const pKmax = document.getElementById('priceKMax');
+        const pKwrap = document.getElementById('pKwrap');
+        const pDmax = document.getElementById('priceDMax');
+        const pDwrap = document.getElementById('pDwrap');
+        const pBmax = document.getElementById('priceBMax');
+        const pBwrap = document.getElementById('pBwrap');
+        const lK=document.getElementById('priceKLabel');
+        const lD=document.getElementById('priceDLabel');
+        const lB=document.getElementById('priceBLabel');
+
+        const rMin = document.getElementById('sRmin');
+        const rBadge = document.getElementById('rBadge');
+        function setRatingBadge(){
+          if(!rMin || !rBadge) return;
+          const v = parseFloat(rMin.value || 0);
+          rBadge.textContent = (v && isFinite(v)) ? `≥ ${v.toFixed(1)} ★` : '—';
+        }
+
+        const priceHint=document.getElementById('priceHint');
+        if (priceHint) priceHint.style.display='none'; // hide old range line
+
+        // product chips
+        const prodK = document.getElementById('prodK');
+        const prodD = document.getElementById('prodD');
+        const prodB = document.getElementById('prodB');
+
+        // opening hours controls
+        const openNowChk = document.getElementById('openNow');
+        const openAtChk = document.getElementById('openAt');
+        const openAtTime = document.getElementById('openAtTime');
+        const likedOnly = document.getElementById('likedOnly');
+
+        const matchHint=document.getElementById('matchHint');
+        // === Quick filter helpers (triggered by clicks in popup & sidebar) ===
+function applyQuickTag(tag){
+  if(tag==='veg'){ vegChk.checked = !vegChk.checked; }
+  if(tag==='card'){ cardChk.checked = !cardChk.checked; }
+  updateChipStyles(); updateFilterHUD();
+}
+
+
+
+function applyQuickSub(group, val){
+  if(group==='veg'){
+    if(vegChk.checked && Array.isArray(selVeg) && selVeg.includes(String(val))){
+      vegChk.checked=false; selVeg=null;
+    } else { vegChk.checked=true; selVeg=[String(val)]; }
+  }
+  if(group==='meat'){
+    if(meatChk.checked && Array.isArray(selMeat) && selMeat.includes(String(val))){
+      meatChk.checked=false; selMeat=null;
+    } else { meatChk.checked=true; selMeat=[String(val)]; }
+  }
+  if(group==='sauce'){
+    if(saucesChk.checked && Array.isArray(selSauce) && selSauce.includes(String(val))){
+      saucesChk.checked=false; selSauce=null;
+    } else { saucesChk.checked=true; selSauce=[String(val)]; }
+  }
+  syncSubRows(); updateChipStyles(); updateFilterHUD();
+}
+
+
+function applyQuickProduct(prod){
+  if(prod==='k'){ prodK.checked = !prodK.checked; }
+  if(prod==='d'){ prodD.checked = !prodD.checked; }
+  if(prod==='b'){ prodB.checked = !prodB.checked; }
+  syncPriceCards(); updateFilterHUD();
+}
+
+
+
+
+        const dayChks=[...document.querySelectorAll('.dayFilter')];
+
+        function updateChipStyles(){
+          document.querySelectorAll('.chip').forEach(lb=>{
+            const i=lb.querySelector('input'); if(!i) return;
+            lb.classList.toggle('active', i.checked);
+          });
+        }
+        document.querySelectorAll('.chip input').forEach(i=>i.addEventListener('change',()=>{
+          updateChipStyles(); updateFilterHUD();
+        }));
+
+        function syncPriceCards(){
+          if(pKwrap) pKwrap.classList.toggle('hidden', !(prodK?.checked));
+          if(pDwrap) pDwrap.classList.toggle('hidden', !(prodD?.checked));
+          if(pBwrap) pBwrap.classList.toggle('hidden', !(prodB?.checked));
+        }
+        // react to product chips
+        [prodK,prodD,prodB].forEach(cb => cb?.addEventListener('change', ()=>{
+          syncPriceCards(); updateChipStyles(); updateFilterHUD(); drawMarkers(); renderList();
+        }));
+        syncPriceCards();
+
+        // Toggle visibility of sub-rows
+        function syncSubRows(){
+          // Hide each sub-row unless its parent main chip is checked
+          if (vegSub) vegSub.classList.toggle('hidden', !vegChk.checked);
+          if (meatSub) meatSub.classList.toggle('hidden', !meatChk.checked);
+          if (sauceSub) sauceSub.classList.toggle('hidden', !saucesChk.checked);
+          // keep chip visuals in sync
+          updateChipStyles();
+        }
+        [vegChk,meatChk,saucesChk].forEach(cb=> cb.addEventListener('change', ()=>{
+          // When turning a main chip ON, default to “all sub-types selected”
+          if (cb===vegChk && vegChk.checked) selVeg=null;
+          if (cb===meatChk && meatChk.checked) selMeat=null;
+          if (cb===saucesChk && saucesChk.checked) selSauce=null;
+          syncSubRows();
+          drawMarkers();
+          renderList();
+        }));
+        syncSubRows();
+
+        // Search
+        // Search + Geocoding suggestions (streets, cities, POIs)
+const searchInput = document.getElementById('searchInput');
+const suggestEl   = document.getElementById('searchSuggest');
+let currentQuery  = '';
+const setQuery = q => currentQuery = (q||'').trim().toLowerCase();
+
+// tiny debounce
+const debounce = (fn, ms=220)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+let geoAbort = null;
+let activeIdx = -1;
+let lastResults = [];
+
+function closeSuggest(){
+  suggestEl.classList.remove('open');
+  suggestEl.innerHTML = '';
+  searchInput.setAttribute('aria-expanded','false');
+  activeIdx = -1; lastResults = [];
+}
+
+function renderSuggest(items){
+  if(!items?.length){ closeSuggest(); return; }
+  suggestEl.innerHTML = items.map((it,i)=>`
+    <div class="item" role="option" data-idx="${i}" tabindex="-1" aria-selected="${i===0?'true':'false'}">
+      <div class="line1">${it.label}</div>
+      ${it.sub ? `<div class="line2">${it.sub}</div>` : ''}
+    </div>
+  `).join('');
+  suggestEl.classList.add('open');
+  searchInput.setAttribute('aria-expanded','true');
+  suggestEl.querySelectorAll('.item').forEach(el=>{
+    el.addEventListener('mouseenter', ()=> setActive(parseInt(el.dataset.idx,10)));
+    el.addEventListener('mousedown', (e)=> e.preventDefault()); // keep focus on input
+    el.addEventListener('click', ()=> choose(parseInt(el.dataset.idx,10)));
+  });
+  setActive(0);
+}
+
+function setActive(i){
+  const items = [...suggestEl.querySelectorAll('.item')];
+  items.forEach(el=> el.classList.remove('is-active'));
+  activeIdx = Math.max(0, Math.min(i, items.length-1));
+  const el = items[activeIdx];
+  if(el){
+    el.classList.add('is-active');
+    el.scrollIntoView({ block:'nearest' });
+  }
+}
+
+function choose(i){
+  const hit = lastResults[i];
+  if(!hit) return;
+  // just fill input, no marker / no map pan
+  searchInput.value = hit.label;
+  setQuery(hit.label);
+  closeSuggest();
+}
+
+
+const fetchGeocode = debounce(async (q)=>{
+  if(geoAbort) geoAbort.abort();
+  geoAbort = new AbortController();
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(q)}`;
+  try{
+    const res = await fetch(url, { signal: geoAbort.signal, headers: { 'Accept-Language': document.documentElement.lang || 'de' }});
+    const json = await res.json();
+    lastResults = (json||[]).map(row=>{
+  const parts = (row.display_name || '').split(',');
+  const label = parts.slice(0,2).join(', ').trim() || row.display_name || '';
+  const sub   = parts.slice(2).join(', ').trim();
+  return { lat:+row.lat, lon:+row.lon, label, sub };
+});
+
+    renderSuggest(lastResults);
+  }catch(_){ /* ignore aborts / network */ }
+}, 220);
+
+// wire input
+searchInput.addEventListener('input', e=>{
+  setQuery(e.target.value);
+  drawMarkers(); renderList(); // keep existing filtering
+  const q = (e.target.value||'').trim();
+  if(q.length >= 2){ fetchGeocode(q); } else { closeSuggest(); }
+});
+
+// keyboard navigation
+searchInput.addEventListener('keydown', (e)=>{
+  if(!suggestEl.classList.contains('open')) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); setActive(activeIdx+1); }
+  if(e.key==='ArrowUp'){   e.preventDefault(); setActive(activeIdx-1); }
+  if(e.key==='Enter'){     e.preventDefault(); choose(activeIdx); }
+  if(e.key==='Escape'){    e.preventDefault(); closeSuggest(); }
+});
+
+// click-outside to close
+document.addEventListener('click', (ev)=>{
+  if(!suggestEl.classList.contains('open')) return;
+  const seg = document.getElementById('seg-looking');
+  if(!seg.contains(ev.target)) closeSuggest();
+});
+
+
+        // ===== Map + clusters
+        // ===== Map + clusters
+map=L.map('map').setView([52.502,13.402],13);
+window._map = map;
+const _lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+  subdomains: 'abcd'
+});
+// layer to show selected geocoded place
+let searchLayer = L.layerGroup().addTo(map);
+
+
+        const _darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+        });
+        window._lightTiles = _lightTiles;
+        window._darkTiles = _darkTiles;
+        (document.documentElement.getAttribute('data-theme')==='dark'?_darkTiles:_lightTiles).addTo(map);
+
+        clusters=L.markerClusterGroup({
+          spiderfyOnMaxZoom:true,
+          showCoverageOnHover:false,
+          maxClusterRadius:50,
+          iconCreateFunction:cluster=>{
+            const count=cluster.getChildCount();
+            return L.divIcon({
+              html:`<div class="cluster-icon"><div class="pin"></div><div class="badge">${count}</div></div>`,
+              className:'cluster-wrapper',
+              iconSize:[34,44], iconAnchor:[17,44]
+            });
+          }
+        }).addTo(map);
+
+        // Geolocation (show a blue dot + accuracy circle, keep watching for movement)
+let meMarker = null, meAccuracy = null;
+document.getElementById('locateBtn').addEventListener('click', ()=>{
+  map.locate({ setView:true, maxZoom:16, watch:true, enableHighAccuracy:true });
+});
+map.on('locationfound', (e)=>{
+  const p = e.latlng;
+  // dot
+  if(!meMarker){
+    meMarker = L.marker(p, {
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="me-dot" aria-label="My location"></div>',
+        iconSize: [14,14],
+        iconAnchor: [7,7]
+      })
+    }).addTo(map);
+  } else {
+    meMarker.setLatLng(p);
+  }
+  // accuracy circle
+  if(!meAccuracy){
+    meAccuracy = L.circle(p, {
+      radius: e.accuracy,
+      color: '#3b82f6',
+      weight: 1,
+      opacity: .6,
+      fillColor: '#3b82f6',
+      fillOpacity: .15
+    }).addTo(map);
+  } else {
+    meAccuracy.setLatLng(p).setRadius(e.accuracy);
+  }
+});
+map.on('locationerror',()=>{
+  alert(document.documentElement.lang==='de'
+    ? 'Position konnte nicht ermittelt werden.'
+    : 'Could not get your location.');
+});
+
+
+        // ======== Load shops ========
+        await loadShops();
+
+        // ===== Helpers for filter HUD =====
+        // ===== Build sub-chips from data =====
+        function uniqWords(arr){
+          const S = new Set();
+          (arr||[]).forEach(v=>{
+            if (Array.isArray(v)) v.forEach(x=> x && S.add(String(x).trim()));
+            else if (typeof v==='string') String(v).split(',').forEach(x=> x && S.add(x.trim()));
+          });
+          return [...S].filter(Boolean).sort((a,b)=>a.localeCompare(b));
+        }
+        function makeSubchips(container, values, getSel, setSel){
+          if(!container) return;
+          container.innerHTML = values.map(v=>(
+            `<label class="chip"><input type="checkbox" data-val="${v}" checked><span>${v}</span></label>`
+          )).join('') || `<small class="subtle">—</small>`;
+          container.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+            cb.addEventListener('change', ()=>{
+              const on = [...container.querySelectorAll('input:checked')].map(x=>x.dataset.val);
+              setSel(on.length === values.length ? null : on);
+              updateChipStyles(); updateFilterHUD(); drawMarkers(); renderList();
+            });
+          });
+        }
+        const vegVals = uniqWords(shops.map(s=>s.veg_types));
+        const meatVals = uniqWords(shops.map(s=>s.meat_types));
+        const sauceVals = uniqWords(shops.map(s=>s.sauce_types));
+        makeSubchips(vegSub, vegVals, ()=>selVeg, v=> selVeg=v);
+        makeSubchips(meatSub, meatVals, ()=>selMeat, v=> selMeat=v);
+        makeSubchips(sauceSub, sauceVals, ()=>selSauce, v=> selSauce=v);
+        syncSubRows(); // keep subchips hidden until their parent chip is checked
+
+        // ===== Helpers for filter HUD =====
+        function euro(x){
+          if(x==null || !isFinite(x)) return '—';
+          const lang=document.documentElement.lang || 'de';
+          try{
+            return new Intl.NumberFormat(lang,{style:'currency',currency:'EUR'}).format(x);
+          } catch(_){
+            return '€ ' + Number(x).toFixed(2);
+          }
+        }
+        const fmtRating = r => (typeof r==='number' && isFinite(r)) ? r.toFixed(1) : '—';
+
+        function hm2m(hhmm){
+          const [h,m]=String(hhmm||'').split(':').map(n=>parseInt(n,10)||0);
+          return h*60+m;
+        }
+        function nowMinutes(){
+          const d=new Date(); return d.getHours()*60+d.getMinutes();
+        }
+        function nowDayCode(){
+          return ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+        }
+        // opening_hours: { mon:[{open:'11:00',close:'19:00'}], ... }
+        function isOpenAt(shop, minutes, day){
+          const oh = shop.opening_hours;
+          if (oh && Array.isArray(oh[day])) {
+            return oh[day].some(r=>{
+              const a=hm2m(r.open), b=hm2m(r.close);
+              if(b<a) return (minutes>=a || minutes<=b); // crosses midnight
+              return minutes>=a && minutes<=b;
+            });
+          }
+          if (Array.isArray(shop.opening_days) && shop.opening_days.length){
+            return shop.opening_days.includes(day);
+          }
+          return true;
+        }
+
+        // Pre-compute slider ranges from loaded data
+        (function initSliderRanges(){
+          const nums = a=>a.filter(v=>v!=null && isFinite(v)).map(Number);
+          const k = nums(shops.map(s=>s?.prices?.kebap));
+          const d = nums(shops.map(s=>s?.prices?.durum));
+          const b = nums(shops.map(s=>s?.prices?.box));
+          const kMin = Math.min(...k,3), kMax = Math.max(...k,10);
+          const dMin = Math.min(...d,3.5), dMax = Math.max(...d,12);
+          const bMin = Math.min(...b,4), bMax = Math.max(...b,14);
+          pKmax.min=kMin.toFixed(1); pKmax.max=kMax.toFixed(1); pKmax.value=pKmax.max;
+          pDmax.min=dMin.toFixed(1); pDmax.max=dMax.toFixed(1); pDmax.value=pDmax.max;
+          pBmax.min=bMin.toFixed(1); pBmax.max=bMax.toFixed(1); pBmax.value=pBmax.max;
+          priceHint.textContent = I18N.fmt(I18N.t('hints.range'),{
+            kmin:euro(kMin),kmax:euro(kMax),
+            dmin:euro(dMin),dmax:euro(dMax),
+            bmin:euro(bMin),bmax:euro(bMax)
+          });
+          updateFilterHUD();
+        })();
+
+        function uiFilters(){
+          const selDays = dayChks.filter(cb=>cb.checked).map(cb=>cb.value);
+          return { selDays };
+        }
+        function countMatches(){
+          let n=0; (shops||[]).forEach(s=>{ if(passesFilters(s)) n++; }); return n;
+        }
+        function updateFilterHUD(){
+          // price labels
+          lK.textContent = (+pKmax.value >= +pKmax.max-1e-9) ? '—' : euro(+pKmax.value);
+          lD.textContent = (+pDmax.value >= +pDmax.max-1e-9) ? '—' : euro(+pDmax.value);
+          lB.textContent = (+pBmax.value >= +pBmax.max-1e-9) ? '—' : euro(+pBmax.value);
+          // rating badge
+          setRatingBadge();
+          // match count
+          const n = countMatches();
+          matchHint.textContent = I18N.fmt(I18N.t('hints.matches'), {n});
+        }
+        [pKmax,pDmax,pBmax].forEach(sl=> sl.addEventListener('input', updateFilterHUD));
+        rMin?.addEventListener('input', ()=>{ setRatingBadge(); drawMarkers(); renderList(); });
+        dayChks.forEach(cb=> cb.addEventListener('change', updateFilterHUD));
+        I18N.onChange(()=>{ priceHint && updateFilterHUD(); });
+        [openNowChk, openAtChk, openAtTime].forEach(el => el?.addEventListener('change', ()=>{
+          updateFilterHUD(); drawMarkers(); renderList();
+        }));
+
+        // ===== Compact popup content (click anywhere to open detail) =====
+        function getPopupContent(s){
+  const P = s?.prices || {};
+  const img = (s.image_urls && s.image_urls.length) ? s.image_urls[0] : `https://picsum.photos/seed/${encodeURIComponent(s.name||s._id)}/400/300`;
+  const ratingVal = Number.isFinite(s.rating_avg) ? s.rating_avg : (Number.isFinite(s.rating_admin) ? s.rating_admin : null);
+  const ratingCnt = Number.isFinite(s.rating_count) ? s.rating_count : null;
+  const ratingHtml = `<button class="pop-rating" data-open-reviews="${s._id}">★ ${ratingVal!=null ? ratingVal.toFixed(1) : "—"}${ratingCnt!=null ? ` (${ratingCnt})` : ""}</button>`;
+  const favOn = myFavs.has(String(s._id)) ? ' is-on' : '';
+
+  // clickable tags (data-filter plumbing)
+  const onVeg   = !!document.getElementById('vegOnly')?.checked;
+const onCard  = !!document.getElementById('cardOnly')?.checked;
+const onK     = !!document.getElementById('prodK')?.checked;
+const onD     = !!document.getElementById('prodD')?.checked;
+const onB     = !!document.getElementById('prodB')?.checked;
+
+const tagVeg  = s.vegetarian ? `<span class="pop-tag${onVeg?' is-on':''}" data-filter-type="tag" data-filter="veg">🥬 ${I18N.t('popup.tags.veg')}</span>` : '';
+const tagCard = s.card        ? `<span class="pop-tag${onCard?' is-on':''}" data-filter-type="tag" data-filter="card">💳 ${I18N.t('popup.tags.cards')}</span>` : '';
+
+
+// (subcategory chips removed – only veg + card shown)
+
+
+  return `<div class="pop-card" data-id="${s._id}">
+    <div class="pop-media"><img src="${img}" alt=""></div>
+    <div class="pop-body">
+      <div class="pop-head">
+        <div class="pop-title">${s.name || '—'}</div>
+${ratingHtml}
+
+
+        <button class="fav-btn${favOn}" data-fav="${s._id}" aria-label="Save">❤</button>
+      </div>
+      <div class="pop-prices">
+  <div class="pop-pill${onK?' is-on':''}" data-filter-type="price" data-prod="k">🥙 ${euro(P.kebap)}</div>
+  <div class="pop-pill${onD?' is-on':''}" data-filter-type="price" data-prod="d">🌯 ${euro(P.durum)}</div>
+  <div class="pop-pill${onB?' is-on':''}" data-filter-type="price" data-prod="b">📦 ${euro(P.box)}</div>
+</div>
+            <div class="pop-footer">
+        ${ (isModerator && (s.verification_status||'unverified')!=='verified')
+            ? `<button class="pop-more pop-verify" data-verify="${s._id}">✅ Verify</button>`
+            : '' }
+
+
+        <button class="pop-more" data-id="${s._id}">${document.documentElement.lang==='de' ? 'Mehr' : 'More'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+
+        // Popup interactions
+map.on('popupopen', e=>{
+  const root = e.popup._contentNode?.querySelector('.pop-card'); if(!root) return;
+
+  // “More” opens detail — bind ALL that exist in this popup
+      // “More” handled via global delegated listener (rebind-safe)
+  // (removed per-popup listeners)
+
+
+
+  // ✅ Verify in popup (moderator only)
+  // ✅ Verify in popup (moderator only) — keep popup usable after verify
+const vbtn = e.popup._contentNode?.querySelector('.pop-verify');
+if (vbtn){
+  vbtn.addEventListener('click', async (ev)=>{
+    ev.preventDefault();
+    ev.stopPropagation();
+    const id = vbtn.getAttribute('data-verify');
+    try{
+      const { error } = await supa
+        .from('shops')
+        .update({
+          verification_status: 'verified',
+          verified_by: currentUser?.id || null,
+          verified_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .neq('verification_status','verified');
+      if (error){ alert(`Could not verify:\n${error.message}`); return; }
+
+      // update local copy
+      const s = shops.find(x=>String(x._id)===String(id));
+      if (s){
+        s.verification_status = 'verified';
+        s.verified_by = currentUser?.id || null;
+        s.verified_at = new Date().toISOString();
+      }
+
+      // Re-render popup; popupopen may not always fire on setPopupContent,
+      // so open it again on next tick to ensure handlers are rebound.
+      const m = markerById.get(id);
+      if (m){
+        m.setPopupContent(getPopupContent(s));
+        setTimeout(()=> m.openPopup(), 0);
+      }
+      renderList();
+    }catch(e){
+      alert(`Could not verify:\n${e?.message||e}`);
+    }
+  });
+}
+
+
+
+  // Heart toggling
+  const favBtn = e.popup._contentNode?.querySelector('.fav-btn');
+  if (favBtn) {
+    const id = favBtn.getAttribute('data-fav');
+    favBtn.classList.toggle('is-on', myFavs.has(String(id)));
+    favBtn.addEventListener('click', async (ev)=>{
+      ev.stopPropagation();
+      await toggleFavorite(id);
+      favBtn.classList.toggle('is-on', myFavs.has(String(id)));
+    });
+    // open reviews from rating pill
+const rbtn = e.popup._contentNode?.querySelector('[data-open-reviews]');
+if (rbtn){
+  rbtn.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    const id = rbtn.getAttribute('data-open-reviews');
+    const shop = shops.find(x=>String(x._id)===String(id));
+    if(shop) openReviews(shop);
+  });
+}
+
+  }
+
+  // NEW: click-to-filter (tags, subcats, prices)
+// NEW: click-to-filter (tags, subcats, prices) but stay at current popup
+// NEW: click-to-filter (tags, subcats, prices) but stay at current popup
+const anchorId = root.getAttribute('data-id');
+e.popup._contentNode.querySelectorAll('[data-filter-type]').forEach(el=>{
+  el.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    const type = el.getAttribute('data-filter-type');
+    if(type==='tag'){
+      applyAndStay(anchorId, ()=> applyQuickTag(el.getAttribute('data-filter')));
+    }
+    if(type==='sub'){
+      applyAndStay(anchorId, ()=> applyQuickSub(el.getAttribute('data-group'), el.getAttribute('data-val')));
+    }
+    if(type==='price'){
+      applyAndStay(anchorId, ()=> applyQuickProduct(el.getAttribute('data-prod')));
+    }
+  });
+});
+
+// (removed duplicate verify handler – handled by .pop-verify binding above)
+
+
+
+});
+
+
+        // ===== Filters =====
+        function passesFilters(s){
+          if(currentQuery){
+            const hay=[s.name||'', s.address||'', ...(s.opening_days||[])].join(' ').toLowerCase();
+            if(!hay.includes(currentQuery)) return false;
+          }
+          if(vegChk?.checked && !s.vegetarian) return false;
+          if(meatChk?.checked && !s.meat) return false;
+          if(saucesChk?.checked && !s.sauces) return false;
+
+          // Sub-types: if user deselected some, require intersection
+          if (vegChk?.checked && Array.isArray(selVeg)) {
+            const ok = (s.veg_types||[]).some(t=> selVeg.includes(String(t)));
+            if (!ok) return false;
+          }
+          if (meatChk?.checked && Array.isArray(selMeat)) {
+            const ok = (s.meat_types||[]).some(t=> selMeat.includes(String(t)));
+            if (!ok) return false;
+          }
+          if (saucesChk?.checked && Array.isArray(selSauce)) {
+            const ok = (s.sauce_types||[]).some(t=> selSauce.includes(String(t)));
+            if (!ok) return false;
+          }
+
+          if(breadChk?.checked && !s.homemade_bread) return false;
+          if(cardChk?.checked && !s.card) return false; // NEW
+
+          // Prices only apply when that product was chosen
+          if(prodK?.checked && pKmax?.value && s.prices.kebap > parseFloat(pKmax.value)) return false;
+          if(prodD?.checked && pDmax?.value && s.prices.durum > parseFloat(pDmax.value)) return false;
+          if(prodB?.checked && pBmax?.value && s.prices.box > parseFloat(pBmax.value)) return false;
+
+          // Day filter (same as before)
+          const selDays = dayChks.filter(cb=>cb.checked).map(cb=>cb.value);
+          if(selDays.length && (!s.opening_days || !selDays.every(d=>s.opening_days.includes(d)))) return false;
+
+          // Opening-hours filter
+          if(openNowChk?.checked || (openAtChk?.checked && openAtTime?.value)){
+            const mins = (openAtChk?.checked && openAtTime?.value) ? hm2m(openAtTime.value) : nowMinutes();
+            const daysToCheck = selDays.length ? selDays : [nowDayCode()];
+            const ok = daysToCheck.some(d => isOpenAt(s, mins, d));
+            if(!ok) return false;
+          }
+
+          // NEW: liked shops filter
+          if(likedOnly?.checked && !myFavs.has(String(s._id))) return false;
+
+          // Minimum rating (unchanged)
+          const rminEl = document.getElementById('sRmin');
+          if(rminEl && rminEl.value){
+            const min = parseFloat(rminEl.value);
+            const eff = Number.isFinite(s.rating_avg) ? s.rating_avg : (Number.isFinite(s.rating_admin) ? s.rating_admin : -Infinity);
+            if(!isFinite(eff) || eff < min) return false;
+          }
+          return true;
+        }
+
+        // ===== Draw markers =====
+        const empty = document.getElementById('emptyOverlay');
+        function drawMarkers(skipFit=false){
+  clusters.clearLayers();
+markerById.clear();
+let any=false;
+// helper ensures consistent marker look
+
+  (shops||[]).forEach(s=>{
+    if(!passesFilters(s)) return;
+    const m = L.marker([s.lat,s.lng], {
+  icon: L.divIcon({
+    html:`<div class="shop-pin ${s.verification_status==='verified'?'verified':'unverified'}"><div class="p"></div></div>`,
+    className:'', iconSize:[28,40], iconAnchor:[14,34]
+  })
+});
+
+    m.bindPopup(getPopupContent(s), { maxWidth: 360, className: 'donerd-popup' });
+    clusters.addLayer(m);
+    markerById.set(s._id, m);
+    any=true;
+  });
+  if(any){
+    empty.classList.add('hidden');
+    if(!skipFit){
+      try{ map.fitBounds(clusters.getBounds(),{padding:[40,40]}); }catch(_){}
+    }
+  } else {
+    empty.classList.remove('hidden');
+  }
+}
+function applyAndStay(anchorId, applyFn){
+  const center = map.getCenter();
+  const zoom   = map.getZoom();
+  applyFn();
+  drawMarkers(true); renderList();       // skip fitBounds
+  map.setView(center, zoom, { animate:false });
+  if(anchorId){
+    const m = markerById.get(anchorId);
+    if(m) m.openPopup();
+  }
+}
+
+
+        // ===== Sidebar =====
+        // ===== Sidebar (clean top bar + thumbnails) =====
+        const sideList = document.getElementById('sideList');
+const sideHide = document.getElementById('sideHide');
+const sideTab = document.getElementById('sideTab');
+const openFiltersBtn = document.getElementById('openFilters');
+const sideMatchCount = document.getElementById('sideMatchCount');
+
+sideHide.addEventListener('click', ()=>{
+  document.body.classList.add('side-collapsed');
+  invalidateAfterFrame(200);
+});
+sideTab.addEventListener('click', ()=>{
+  document.body.classList.remove('side-collapsed');
+  invalidateAfterFrame(200);
+});
+openFiltersBtn?.addEventListener('click', ()=> {
+  document.getElementById('modalOverlay').style.display='flex';
+});
+
+// subtle shadow when list scrolls under header
+const sideHeader = document.querySelector('.side-header');
+function toggleHeaderShadow(){
+  if(!sideHeader || !sideList) return;
+  const on = sideList.scrollTop > 6;
+  sideHeader.style.boxShadow = on ? '0 6px 16px rgba(0,0,0,.10)' : 'none';
+}
+sideList?.addEventListener('scroll', toggleHeaderShadow);
+setTimeout(toggleHeaderShadow, 0);
+
+
+        function renderList(){
+          const arr = (shops||[]).filter(passesFilters);
+          // update compact counter
+          if (sideMatchCount) {
+            sideMatchCount.textContent = I18N.fmt(I18N.t('hints.matches'), { n: arr.length });
+          }
+
+          sideList.innerHTML = arr.map(s=>{
+            const P=s.prices||{};
+            const img = (s.image_urls && s.image_urls.length) ? s.image_urls[0] : `https://picsum.photos/seed/${encodeURIComponent(s.name||s._id)}/300/300`;
+            const userPill = Number.isFinite(s.rating_avg)
+  ? `<button class="rating-pill rating-user" data-open-reviews="${s._id}"><span class="star star-user">★</span> ${fmtRating(s.rating_avg)}${s.rating_count? ` (${s.rating_count})`:''}</button>`
+  : '';
+const adminPill = Number.isFinite(s.rating_admin)
+  ? `<button class="rating-pill rating-admin" data-open-reviews="${s._id}"><span class="star star-admin">★</span> ${fmtRating(s.rating_admin)}</button>`
+  : '';
+
+
+            // ONLY vegetarian and cards here:
+            const onVeg  = !!document.getElementById('vegOnly')?.checked;
+const onCard = !!document.getElementById('cardOnly')?.checked;
+const onK    = !!document.getElementById('prodK')?.checked;
+const onD    = !!document.getElementById('prodD')?.checked;
+const onB    = !!document.getElementById('prodB')?.checked;
+
+const meta = [
+  `<span class="meta-pill">${s.verification_status==='verified' ? '✅ Verified' : '⏳ Unverified'}</span>`,
+  s.vegetarian ? `<span class="meta-pill${onVeg?' is-on':''}" data-filter-type="tag" data-filter="veg">🥬 ${I18N.t('popup.tags.veg')}</span>` : '',
+  s.card ? `<span class="meta-pill${onCard?' is-on':''}" data-filter-type="tag" data-filter="card">💳 ${I18N.t('popup.tags.cards')}</span>` : ''
+].filter(Boolean).join('');
+
+
+
+            const favOn = myFavs.has(String(s._id)) ? ' is-on' : '';
+
+            return `<div class="side-item" data-id="${s._id}" role="listitem">
+              <div class="side-main">
+                <button class="fav-btn${favOn}" data-fav="${s._id}" aria-label="Save" style="position:absolute;top:12px;right:12px">❤</button>
+                <div class="side-name">${s.name||'—'}</div>
+                <div class="side-addr">${s.address||''}</div>
+                <div class="side-ratings"> ${userPill}${adminPill} </div>
+                <div class="side-prices">
+                  <span class="price-pill${onK?' is-on':''}" data-filter-type="price" data-prod="k" data-price="${P.kebap ?? ''}">🥙 ${euro(P.kebap)}</span>
+<span class="price-pill${onD?' is-on':''}" data-filter-type="price" data-prod="d" data-price="${P.durum ?? ''}">🌯 ${euro(P.durum)}</span>
+<span class="price-pill${onB?' is-on':''}" data-filter-type="price" data-prod="b" data-price="${P.box   ?? ''}">📦 ${euro(P.box)}</span>
+
+                </div>
+                <div class="side-meta"> ${meta} </div>
+                <button class="side-cta" data-id="${s._id}">Show</button>
+              </div>
+            </div>`;
+          }).join('') || `<div class="side-item" style="opacity:.7">${I18N.t('empty','No results.')}</div>`;
+
+          // navigate to marker on click
+          sideList.querySelectorAll('.side-item, .side-cta').forEach(el=>{
+            el.addEventListener('click', (e)=>{
+              const id = el.getAttribute('data-id') || el.dataset.id;
+              const s = (shops||[]).find(x=>String(x._id)===String(id));
+              if(!s) return;
+              document.body.classList.add('side-collapsed');
+              map.setView([s.lat,s.lng], 17);
+              const m = markerById.get(s._id);
+              if(m) m.openPopup();
+            });
+          });
+
+          // wire hearts
+          sideList.querySelectorAll('.fav-btn').forEach(btn=>{
+            btn.addEventListener('click', async (e)=>{
+              e.stopPropagation();
+              const id = btn.getAttribute('data-fav');
+              await toggleFavorite(id); // ✅ wait for DB
+              btn.classList.toggle('is-on', myFavs.has(String(id))); // ✅ update after
+            });
+            
+          });
+          
+        }
+        // NEW: sidebar click-to-filter (delegate)
+// NEW: sidebar click-to-filter (delegate)
+sideList.addEventListener('click', (ev)=>{
+  const el = ev.target.closest('[data-filter-type]');
+  if(!el) return;
+  ev.stopPropagation();
+  const t = el.getAttribute('data-filter-type');
+  if(t==='tag')   applyQuickTag(el.getAttribute('data-filter'));
+  if(t==='sub')   applyQuickSub(el.getAttribute('data-group'), el.getAttribute('data-val'));
+  if(t==='price') applyQuickProduct(el.getAttribute('data-prod'));
+});
+
+// NEW: global delegated handler so "More" always works even after popup HTML refresh
+document.addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('.donerd-popup .pop-more[data-id]');
+  if(!btn) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const id = btn.getAttribute('data-id');
+  const s = shops.find(x=>String(x._id)===String(id));
+  if(s) openDetail(s);
+});
+
+
+// INITIAL DRAW once data & UI wired (ensures moderator verify button appears on first render)
+drawMarkers(); renderList();
+
+
+
+
+
+        // ===== Detail sheet logic =====
+        const dOv = document.getElementById('detailOverlay');
+        const dTitle = document.getElementById('dTitle');
+        const dAddr = document.getElementById('dAddr');
+        const dHero = document.getElementById('dHero');
+        const dPrices= document.getElementById('dPrices');
+        const dTags = document.getElementById('dTags');
+        const dDays = document.getElementById('dDays');
+        const dClose = document.getElementById('dClose');
+const dCheck = document.getElementById('dCheckin');
+
+// === Edit modal refs ===
+const eOv   = document.getElementById('editOverlay');
+const eMd   = document.getElementById('editModal');
+const eClose= document.getElementById('editClose');
+const eCancel= document.getElementById('editCancel');
+const eSave = document.getElementById('editSave');
+
+const eK = document.getElementById('eK');
+const eD = document.getElementById('eD');
+const eB = document.getElementById('eB');
+
+const eVeg = document.getElementById('eVeg');
+const eMeat = document.getElementById('eMeat');
+const eSauces = document.getElementById('eSauces');
+const eBread = document.getElementById('eBread');
+const eCard = document.getElementById('eCard');
+
+const eMon = document.getElementById('eMon');
+const eTue = document.getElementById('eTue');
+const eWed = document.getElementById('eWed');
+const eThu = document.getElementById('eThu');
+const eFri = document.getElementById('eFri');
+const eSat = document.getElementById('eSat');
+const eSun = document.getElementById('eSun');
+
+/* ===== Subcategory editors (UI only; IDs unchanged) ===== */
+let currentEditShop = null;
+
+function renderTypeChips(container, values=[], active=[]) {
+  const root = document.getElementById(container);
+  if(!root) return;
+  const act = new Set((active||[]).map(String));
+  root.innerHTML = (values||[]).map(v=>{
+    const on = act.has(String(v));
+    return `<label class="chip-tag ${on?'on':''}" data-val="${String(v)}">
+      <input type="checkbox" ${on?'checked':''}>
+      <span>${String(v)}</span>
+      <button type="button" class="chip-remove" aria-label="remove">×</button>
+    </label>`;
+  }).join('');
+  // toggle & remove handlers
+  root.querySelectorAll('.chip-tag').forEach(el=>{
+    const cb = el.querySelector('input');
+    const rm = el.querySelector('.chip-remove');
+    cb?.addEventListener('change', ()=>{
+      el.classList.toggle('on', cb.checked);
+    });
+    rm?.addEventListener('click', ()=>{
+      el.remove();
+    });
+  });
+}
+
+function addTagFrom(inputId, containerId){
+  const inp = document.getElementById(inputId);
+  const root = document.getElementById(containerId);
+  if(!inp || !root) return;
+  const val = (inp.value||'').trim();
+  if(!val) return;
+  const exists = [...root.querySelectorAll('.chip-tag span')].some(s=> s.textContent.toLowerCase()===val.toLowerCase());
+  if(exists){ inp.value=''; return; }
+  root.insertAdjacentHTML('beforeend', `
+    <label class="chip-tag on" data-val="${val}">
+      <input type="checkbox" checked>
+      <span>${val}</span>
+      <button type="button" class="chip-remove" aria-label="remove">×</button>
+    </label>
+  `);
+  root.lastElementChild.querySelector('.chip-remove')?.addEventListener('click', e=> e.currentTarget.closest('.chip-tag').remove());
+  inp.value='';
+}
+
+// add buttons
+document.getElementById('eVegAddBtn')?.addEventListener('click', ()=> addTagFrom('eVegAdd','eVegTypes'));
+document.getElementById('eMeatAddBtn')?.addEventListener('click', ()=> addTagFrom('eMeatAdd','eMeatTypes'));
+document.getElementById('eSauceAddBtn')?.addEventListener('click', ()=> addTagFrom('eSauceAdd','eSauceTypes'));
+
+// public opener (call this when entering edit mode for a shop)
+window.openEdit = function(shop){
+  currentEditShop = shop || null;
+  // fill primitives if available
+  if(shop){
+    eK.value = shop.prices?.kebap ?? '';
+    eD.value = shop.prices?.durum ?? '';
+    eB.value = shop.prices?.box ?? '';
+    eVeg.checked = !!shop.vegetarian;
+    eMeat.checked = !!shop.meat;
+    eSauces.checked = !!shop.sauces;
+    eBread.checked = !!shop.homemade_bread;
+    eCard.checked = !!shop.card;
+  }
+  // build available universe of tags from all shops
+  const all = (key)=> [...new Set((shops||[]).flatMap(s=> (s[key]||[])).filter(Boolean))].sort((a,b)=> String(a).localeCompare(String(b)));
+  renderTypeChips('eVegTypes',   all('veg_types'),   shop?.veg_types||[]);
+  renderTypeChips('eMeatTypes',  all('meat_types'),  shop?.meat_types||[]);
+  renderTypeChips('eSauceTypes', all('sauce_types'), shop?.sauce_types||[]);
+
+  // open modal
+  eOv?.classList.add('open');
+  eOv.style.display = 'flex';
+  eOv.setAttribute('aria-hidden','false');
+};
+
+// close edit
+function closeEdit(){
+  eOv?.classList.remove('open');
+  eOv.style.display = 'none';
+  eOv.setAttribute('aria-hidden','true');
+}
+[eClose,eCancel].forEach(b=> b?.addEventListener('click', closeEdit));
+eOv?.addEventListener('click', (ev)=>{ if(ev.target===eOv) closeEdit(); });
+
+/* Save: collect selected tags (UI → object). Keeps existing IDs; sends to DB if currentEditShop present. */
+eSave?.addEventListener('click', async ()=>{
+  const collect = (id)=> [...document.querySelectorAll(`#${id} .chip-tag input:checked + span`)].map(s=> s.textContent.trim()).filter(Boolean);
+
+  const payload = {
+    price_kebap: parseFloat(eK.value)||null,
+    price_durum: parseFloat(eD.value)||null,
+    price_box:   parseFloat(eB.value)||null,
+    vegetarian: !!eVeg.checked,
+    meat: !!eMeat.checked,
+    sauces: !!eSauces.checked,
+    homemade_bread: !!eBread.checked,
+    payment_cards: !!eCard.checked,
+    vegetarian_type: collect('eVegTypes'),
+    meat_types:      collect('eMeatTypes'),
+    sauce_types:     collect('eSauceTypes')
+    // (opening hours serialization can be added if needed later)
+  };
+
+  if(currentEditShop?. _id){
+    try{
+      const { error } = await supa.from('shops').update(payload).eq('id', currentEditShop._id);
+      if(error) throw error;
+      // update local cache
+      const s = shops.find(x=>String(x._id)===String(currentEditShop._id));
+      if(s){
+        s.prices = s.prices||{};
+        s.prices.kebap = payload.price_kebap;
+        s.prices.durum = payload.price_durum;
+        s.prices.box   = payload.price_box;
+        s.vegetarian = payload.vegetarian;
+        s.meat = payload.meat;
+        s.sauces = payload.sauces;
+        s.homemade_bread = payload.homemade_bread;
+        s.card = payload.payment_cards;
+        s.veg_types = payload.vegetarian_type;
+        s.meat_types = payload.meat_types;
+        s.sauce_types = payload.sauce_types;
+      }
+      drawMarkers(true); renderList();
+      try{ alert('✅ Gespeichert'); }catch(_){}
+      closeEdit();
+    }catch(e){
+      alert(`Speichern fehlgeschlagen:\n${e?.message||e}`);
+    }
+  } else {
+    // no shop bound – just close (UI only)
+    closeEdit();
+  }
+});
+
+
+        // === Rating modal (jetzt innerhalb von DOMContentLoaded!) ===
+
+        // ===== Reviews modal logic =====
+const revOv = document.getElementById('reviewsOverlay');
+const revList = document.getElementById('reviewsList');
+const revTitle = document.getElementById('reviewsTitle');
+const revClose = document.getElementById('reviewsClose');
+
+function closeReviews(){
+  revOv.classList.remove('open');
+  revOv.setAttribute('aria-hidden','true');
+}
+revClose?.addEventListener('click', closeReviews);
+revOv?.addEventListener('click', (e)=>{ if(e.target===revOv) closeReviews(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && revOv.classList.contains('open')) closeReviews(); });
+
+function stars(n){ return '★'.repeat(n) + '☆'.repeat(Math.max(0,5-n)); }
+function fmtDate(iso){
+  try{
+    const d=new Date(iso);
+    return new Intl.DateTimeFormat(document.documentElement.lang||'de',{year:'numeric',month:'short',day:'2-digit'}).format(d);
+  }catch(_){ return ''; }
+}
+
+async function fetchReviews(shopId){
+  const { data: rows, error } = await supa
+    .from('shop_ratings')
+    .select('user_id, rating, comment, created_at')
+    .eq('shop_id', shopId)
+    .order('created_at', { ascending:false })
+    .limit(100);
+  if (error) throw error;
+
+  const ids = [...new Set((rows||[]).map(r=>r.user_id).filter(Boolean))];
+  let nameById = {};
+  if (ids.length){
+    const { data: profs } = await supa
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', ids);
+    (profs||[]).forEach(p=> nameById[p.id] = p.display_name || 'User');
+  }
+  return (rows||[]).map(r=>({
+    name: nameById[r.user_id] || 'User',
+    rating: Math.max(1, Math.min(5, parseInt(r.rating,10)||0)),
+    comment: r.comment || '',
+    date: r.created_at
+  }));
+}
+
+async function openReviews(shop){
+  revTitle.textContent = (document.documentElement.lang==='de' ? 'Bewertungen — ' : 'Reviews — ') + (shop.name||'Shop');
+  revList.innerHTML = `<div class="rev-empty">…</div>`;
+  revOv.classList.add('open');
+  revOv.setAttribute('aria-hidden','false');
+
+  try{
+    const items = await fetchReviews(shop._id);
+    if(!items.length){
+      revList.innerHTML = `<div class="rev-empty">${document.documentElement.lang==='de' ? 'Noch keine Bewertungen.' : 'No reviews yet.'}</div>`;
+      return;
+    }
+    revList.innerHTML = items.map(it=>`
+      <div class="rev-item">
+        <div class="rev-row">
+          <div class="rev-author">${it.name}</div>
+          <div class="rev-stars">${stars(it.rating)}</div>
+        </div>
+        <div class="rev-date">${fmtDate(it.date)}</div>
+        ${it.comment ? `<div class="rev-comment">${it.comment.replace(/</g,'&lt;')}</div>` : ''}
+      </div>
+    `).join('');
+  }catch(err){
+    console.error('load reviews failed', err);
+    revList.innerHTML = `<div class="rev-empty">⚠️ ${document.documentElement.lang==='de' ? 'Konnte Reviews nicht laden.' : 'Could not load reviews.'}</div>`;
+  }
+}
+
+
+        let _rateShop = null, _rateValue = 0;
+        const rateOv = document.getElementById('rateOverlay');
+        const rateTitle = document.getElementById('rateTitle');
+        const rateStars = document.getElementById('rateStars');
+        const rateText = document.getElementById('rateComment');
+        const rateSubmit = document.getElementById('rateSubmit');
+        const rateCancel = document.getElementById('rateCancel');
+        const rateClose = document.getElementById('rateClose');
+
+        function setStarUI(v){
+          _rateValue = v;
+          rateStars.querySelectorAll('.star-btn').forEach(btn=>{
+            const n = Number(btn.dataset.val);
+            btn.classList.toggle('on', n <= v);
+          });
+          rateSubmit.disabled = !(v >= 1 && v <= 5);
+        }
+        function openRateModal(shop){
+          _rateShop = shop; setStarUI(0);
+          rateText.value = '';
+          rateTitle.textContent = (document.documentElement.lang === 'de' ? 'Bewerten' : 'Rate') + ' — ' + (shop.name || 'Shop');
+          rateOv.classList.add('open');
+          rateOv.setAttribute('aria-hidden','false');
+        }
+        function closeRateModal(){
+          rateOv.classList.remove('open');
+          rateOv.setAttribute('aria-hidden','true');
+        }
+        rateStars.addEventListener('click', (e)=>{
+          const b = e.target.closest('.star-btn'); if (b) setStarUI(Number(b.dataset.val));
+        });
+        rateSubmit.addEventListener('click', async ()=>{
+          if(!_rateShop || _rateValue < 1) return;
+          try{
+            await submitRating(_rateShop, _rateValue, rateText.value.trim());
+            closeRateModal();
+            alert(document.documentElement.lang==='de' ? 'Danke für deine Bewertung!' : 'Thanks for your rating!');
+            drawMarkers(); renderList(); openDetail(_rateShop);
+          }catch(err){
+            console.error('rating failed:', err);
+            alert(document.documentElement.lang==='de' ? 'Bewertung konnte nicht gesendet werden.' : 'Could not send rating.');
+          }
+        });
+        rateCancel.addEventListener('click', closeRateModal);
+        rateClose .addEventListener('click', closeRateModal);
+        rateOv.addEventListener('click', (e)=>{ if(e.target===rateOv) closeRateModal(); });
+
+        function closeDetail(){
+          dOv.classList.remove('open');
+          dOv.setAttribute('aria-hidden','true');
+        }
+        dClose.addEventListener('click', closeDetail);
+dOv.addEventListener('click', (e)=>{ if(e.target===dOv) closeDetail(); });
+
+// ===== Edit modal logic =====
+function fmtDay(arr){ return (arr||[]).map(r=>`${r.open}-${r.close}`).join(', '); }
+function parseDay(str){
+  return String(str||'')
+    .split(',')
+    .map(s=>s.trim())
+    .filter(Boolean)
+    .map(r=>{
+      const [a,b] = r.split('-').map(x=>x.trim());
+      return (a && b) ? { open:a, close:b } : null;
+    })
+    .filter(Boolean);
+}
+function openEdit(shop){
+  if(!isModerator){
+    alert(document.documentElement.lang==='de' ? 'Nur Moderatoren können bearbeiten.' : 'Only moderators can edit.');
+    return;
+  }
+  eK.value = shop.prices?.kebap ?? '';
+  eD.value = shop.prices?.durum ?? '';
+  eB.value = shop.prices?.box ?? '';
+
+  eVeg.checked   = !!shop.vegetarian;
+  eMeat.checked  = !!shop.meat;
+  eSauces.checked= !!shop.sauces;
+  eBread.checked = !!shop.homemade_bread;
+  eCard.checked  = !!shop.card;
+
+  const oh = shop.opening_hours || {};
+  eMon.value = fmtDay(oh.mon); eTue.value = fmtDay(oh.tue); eWed.value = fmtDay(oh.wed);
+  eThu.value = fmtDay(oh.thu); eFri.value = fmtDay(oh.fri); eSat.value = fmtDay(oh.sat); eSun.value = fmtDay(oh.sun);
+
+  eOv.classList.add('open'); eOv.setAttribute('aria-hidden','false');
+}
+function closeEdit(){
+  eOv.classList.remove('open'); eOv.setAttribute('aria-hidden','true');
+}
+async function saveEdit(shop){
+  const opening_hours = {
+    mon: parseDay(eMon.value), tue: parseDay(eTue.value), wed: parseDay(eWed.value),
+    thu: parseDay(eThu.value), fri: parseDay(eFri.value), sat: parseDay(eSat.value), sun: parseDay(eSun.value)
+  };
+  // strip empty arrays
+  Object.keys(opening_hours).forEach(k=>{ if(!opening_hours[k]?.length) delete opening_hours[k]; });
+
+  const opening_days = Object.keys(opening_hours).filter(k=>opening_hours[k]?.length);
+
+  const update = {
+    price_kebap: eK.value ? Number(eK.value) : null,
+    price_durum: eD.value ? Number(eD.value) : null,
+    price_box:   eB.value ? Number(eB.value) : null,
+    vegetarian: eVeg.checked,
+    meat: eMeat.checked,
+    sauces: eSauces.checked,
+    homemade_bread: eBread.checked,
+    payment_cards: eCard.checked,
+    opening_hours,
+    opening_days
+  };
+
+  const { error } = await supa.from('shops').update(update).eq('id', shop._id);
+  if(error){ alert('Save failed: ' + error.message); return; }
+
+  // update local copy
+  shop.prices.kebap = update.price_kebap ?? shop.prices.kebap;
+  shop.prices.durum = update.price_durum ?? shop.prices.durum;
+  shop.prices.box   = update.price_box   ?? shop.prices.box;
+  shop.vegetarian = update.vegetarian;
+  shop.meat = update.meat;
+  shop.sauces = update.sauces;
+  shop.homemade_bread = update.homemade_bread;
+  shop.card = update.payment_cards;
+  shop.opening_hours = update.opening_hours;
+  shop.opening_days = update.opening_days;
+
+  closeEdit();
+  drawMarkers(); renderList(); openDetail(shop);
+}
+
+[eClose,eCancel].forEach(b=> b?.addEventListener('click', closeEdit));
+eOv?.addEventListener('click', (ev)=>{ if(ev.target===eOv) closeEdit(); });
+eSave?.addEventListener('click', ()=> {
+  const id = document.getElementById('dEdit')?.getAttribute('data-id');
+  const shop = shops.find(x=> String(x._id)===String(id));
+  if(shop) saveEdit(shop);
+});
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && eOv.classList.contains('open')) closeEdit(); });
+
+
+        function openDetail(s){
+          dTitle.textContent = s.name || '—';
+          dAddr.textContent = s.address || I18N.t('popup.noaddr');
+          dHero.innerHTML = (s.image_urls && s.image_urls.length) ? s.image_urls.map(u=>`<img src="${u}" alt="">`).join('') : `<img src="https://picsum.photos/seed/${encodeURIComponent(s.name||s._id)}/600/220" alt="">`;
+
+          const P=s.prices||{};
+const userPill = Number.isFinite(s.rating_avg) ? `<span class="rating-pill rating-user"><span class="star star-user">★</span> ${fmtRating(s.rating_avg)}${s.rating_count? ` (${s.rating_count})`:''}</span>` : '';
+const adminPill = Number.isFinite(s.rating_admin) ? `<span class="rating-pill rating-admin"><span class="star star-admin">★</span> ${fmtRating(s.rating_admin)}</span>` : '';
+// status pill under title
+const head = document.querySelector('#detailSheet .sheet-head');
+if(head){
+  let st = head.querySelector('.status-badge');
+  if(!st){
+    st = document.createElement('span');
+    st.className = 'status-badge';
+    head.insertBefore(st, head.lastElementChild); // before Close button
+  }
+  st.className = `status-badge ${s.verification_status==='verified'?'ok':'warn'}`;
+  st.textContent = s.verification_status==='verified' ? '✅ Verified' : '⏳ Unverified';
+}
+
+          dPrices.innerHTML = `<div class="price-row" style="display:grid;gap:8px">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    ${userPill}${adminPill}
+    <button class="pop-more" id="dEdit" data-id="${s._id}" style="margin-left:auto">
+      ⚙️ ${document.documentElement.lang==='de'?'Einstellungen':'Settings'}
+    </button>
+
+  </div>
+  <div class="price-pill">🥙 ${I18N.t('popup.kebap')} ${euro(P.kebap)}</div>
+  <div class="price-pill">🌯 ${I18N.t('popup.durum')} ${euro(P.durum)}</div>
+  <div class="price-pill">📦 ${I18N.t('popup.box')} ${euro(P.box)}</div>
+</div>`;
+
+// wire the buttons
+// wire Settings button (moderators only)
+{
+  const editBtn = dPrices.querySelector('#dEdit');
+  if (editBtn){
+    if (!isModerator) editBtn.style.display = 'none';
+    editBtn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      openEdit(s);
+    });
+  }
+}
+
+
+
+          const tags=[];
+          if(s.vegetarian) tags.push(`<span class="tag-pill"><span class="icon-bubble">🥬</span>${I18N.t('popup.tags.veg')}</span>`);
+          if(s.meat) tags.push(`<span class="tag-pill"><span class="icon-bubble">🍖</span>${I18N.t('popup.tags.meat')}</span>`);
+          if(s.sauces) tags.push(`<span class="tag-pill"><span class="icon-bubble">🥫</span>${I18N.t('popup.tags.sauces')}</span>`);
+          if(s.homemade_bread) tags.push(`<span class="tag-pill"><span class="icon-bubble">🥖</span>${I18N.t('popup.tags.bread')}</span>`);
+          if(s.card) tags.push(`<span class="tag-pill"><span class="icon-bubble">💳</span>${I18N.t('popup.tags.cards')}</span>`);
+
+          /* ===== Categories overview (compact, collapsible) ===== */
+          const dCats = document.getElementById('dCategories');
+          const list = [];
+          // helper for pills
+          const chip = txt => `<span class="chip-pill">${txt}</span>`;
+          const chipMini = (a,b) => `<span class="chip-pill"><span class="mini">${a}</span>${b}</span>`;
+
+          const vegLabel = I18N.t('popup.cats.veg','Vegetarian');
+          const meatLabel = I18N.t('popup.cats.meat','Meat');
+          const sauceLabel = I18N.t('popup.cats.sauces','Sauces');
+          const breadLabel = I18N.t('popup.cats.bread','Homemade bread');
+          const payLabel = I18N.t('popup.cats.pay','Card payment');
+
+          if (s.vegetarian || (s.veg_types && s.veg_types.length)){
+            list.push({ icon:'🥬', title: vegLabel, count:(s.veg_types||[]).length,
+              body: (s.veg_types||[]).length ? (s.veg_types||[]).map(v=> chip(v)).join('') : chip(I18N.t('popup.cats.veg','On menu'))
+            });
+          }
+          if (s.meat || (s.meat_types && s.meat_types.length)){
+            list.push({ icon:'🍖', title: meatLabel, count:(s.meat_types||[]).length,
+              body: (s.meat_types||[]).length ? (s.meat_types||[]).map(v=> chip(v)).join('') : chip(I18N.t('popup.cats.meat','On menu'))
+            });
+          }
+          if (s.sauces || (s.sauce_types && s.sauce_types.length)){
+            list.push({ icon:'🥫', title: sauceLabel, count:(s.sauce_types||[]).length,
+              body: (s.sauce_types||[]).length ? (s.sauce_types||[]).map(v=> chip(v)).join('') : chip(I18N.t('popup.cats.sauces','Available'))
+            });
+          }
+          if (s.homemade_bread){
+            list.push({ icon:'🥖', title: breadLabel, count:0, body: chip(I18N.t('popup.cats.bread','Yes')) });
+          }
+          if (s.card){
+            list.push({ icon:'💳', title: payLabel, count:0, body: chip(I18N.t('popup.cats.pay','Accepted')) });
+          }
+
+          // render
+          if (list.length){
+            dCats.innerHTML = `<div style="font-weight:900;margin-bottom:6px">${I18N.t('rec.title','Recommended')}</div>
+              ${list.map((row,idx)=>`
+                <div class="cat-card ${idx===0?'open':''}">
+                  <div class="cat-head">
+                    <span>${row.icon}</span>
+                    <div class="cat-title">${row.title}</div>
+                    <div class="cat-count">${row.count || '✓'}</div>
+                  </div>
+                  <div class="cat-body">
+                    <div class="cat-chips">${row.body}</div>
+                  </div>
+                </div>
+              `).join('')}
+            `;
+            // toggle open/close
+            dCats.querySelectorAll('.cat-card .cat-head').forEach(h=>{
+              h.addEventListener('click', ()=> h.parentElement.classList.toggle('open'));
+            });
+          }else{
+            dCats.innerHTML = '';
+          }
+
+          dDays.innerHTML = (Array.isArray(s.opening_days) && s.opening_days.length)
+            ? `<div class="days-row">${s.opening_days.map(code=>`<span class="day-pill"><span class="icon-bubble">📅</span>${I18N.day(code)}</span>`).join('')}</div>`
+            : '';
+
+          // --- Opening hours pretty card ---
+          const order = ['mon','tue','wed','thu','fri','sat','sun'];
+          const todayIdx = new Date().getDay(); // 0=Sun..6=Sat
+          const idxToCode = ['sun','mon','tue','wed','thu','fri','sat'];
+          const today = idxToCode[todayIdx];
+          const oh = s.opening_hours || {}; // { mon:[{open:'10:00',close:'21:00'}], ... }
+
+          function fmtRange(r){ return `${r.open}–${r.close}`; }
+          function toMin(t){ const [H,M] = String(t||'0:0').split(':').map(n=>parseInt(n,10)); return H*60+M; }
+          function nowInfo(){
+            const arr = Array.isArray(oh?.[today]) ? oh[today] : [];
+            const now = new Date(); const cur = now.getHours()*60 + now.getMinutes();
+            for(const r of arr||[]){
+              const a = toMin(r.open), b = toMin(r.close);
+              if(cur>=a && cur<b) return { open:true, until:r.close };
+            }
+            return { open:false, next: (arr && arr[0]?.open) || null };
+          }
+          const status = nowInfo();
+          const statusText = status.open
+            ? (document.documentElement.lang==='de' ? `Geöffnet – bis ${status.until}` : `Open now – until ${status.until}`)
+            : (document.documentElement.lang==='de' ? (status.next ? `Geschlossen – ab ${status.next}` : 'Heute geschlossen') : (status.next ? `Closed – opens at ${status.next}` : 'Closed today'));
+
+          const rowsHtml = order.map(code=>{
+            const arr = Array.isArray(oh?.[code]) ? oh[code] : [];
+            const txt = (arr.length ? arr.map(fmtRange).join(', ') : (document.documentElement.lang==='de' ? 'Geschlossen' : 'Closed'));
+            return `<div class="hours-row ${code===today ? 'is-today' : ''}">
+              <div class="h-day">${I18N.day(code)}</div>
+              <div class="h-time">${arr.length ? txt : `<span class="h-closed">${txt}</span>`}</div>
+            </div>`;
+          }).join('');
+
+          document.getElementById('dHours').innerHTML = `
+            <div class="hours-card">
+              <div class="hours-head">
+                <div>🕒 ${document.documentElement.lang==='de' ? 'Öffnungszeiten' : 'Opening hours'}</div>
+                <div class="hours-status ${status.open ? 'open' : 'closed'}">
+                  <span class="dot"></span><span>${statusText}</span>
+                </div>
+              </div>
+              <div class="hours-list">${rowsHtml}</div>
+            </div>
+          `;
+
+          // Keep or clear the old day chips underneath:
+          dDays.innerHTML = '';
+
+          document.getElementById('dDir').onclick = ()=> window.open(`https://www.google.com/maps?q=${s.lat},${s.lng}`, '_blank','noopener');
+          document.getElementById('dShare').onclick = async ()=>{
+            const url=`https://maps.google.com/?q=${s.lat},${s.lng}`;
+            if(navigator.share){
+              try{ await navigator.share({title:s.name,url}); }catch(_){}
+            } else {
+              await navigator.clipboard.writeText(url);
+              alert('Link copied!');
+            }
+          };
+          document.getElementById('dCopy').onclick = async ()=>{
+            await navigator.clipboard.writeText(`https://maps.google.com/?q=${s.lat},${s.lng}`);
+            alert('Link copied!');
+          };
+          document.getElementById('dRate').onclick = ()=> openRateModal(s);
+
+          const ci = JSON.parse(localStorage.getItem('checkins')||'{}');
+          const isChecked = !!ci[s._id];
+          dCheck.classList.toggle('done', isChecked);
+dCheck.textContent = isChecked ? '✅ Checked-in' : '➡️ Check-in';
+dCheck.onclick = ()=>{
+  const cur = JSON.parse(localStorage.getItem('checkins')||'{}');
+  cur[s._id]=!cur[s._id];
+  localStorage.setItem('checkins', JSON.stringify(cur));
+  dCheck.classList.toggle('done', !!cur[s._id]);
+  dCheck.textContent = cur[s._id] ? '✅ Checked-in' : '➡️ Check-in';
+};
+
+// 🔐 Moderator-only: inline Verify button when unverified
+const wrap = document.querySelector('.checkin-wrap');
+if (wrap) {
+  let vBtn = document.getElementById('dVerify');
+  if (!vBtn && isModerator && s.verification_status!=='verified') {
+    vBtn = document.createElement('button');
+    vBtn.id = 'dVerify';
+    vBtn.className = 'checkin-btn';
+    vBtn.style.marginTop = '8px';
+    vBtn.textContent = '✅ Verify shop';
+    wrap.appendChild(vBtn);
+  }
+  if (vBtn) {
+    vBtn.style.display = (isModerator && s.verification_status!=='verified') ? 'block' : 'none';
+    vBtn.onclick = async ()=>{
+      try{
+        const { error } = await supa.from('shops').update({
+          verification_status: 'verified',
+          verified_by: currentUser?.id || null,
+          verified_at: new Date().toISOString()
+        }).eq('id', s._id);
+        if (error) throw error;
+        s.verification_status = 'verified';
+        drawMarkers(true); renderList(); openDetail(s);
+        alert('✅ Verified');
+      }catch(e){
+        console.error(e);
+        alert('Could not verify.');
+      }
+    };
+  }
+}
+
+
+          dOv.classList.add('open');
+          dOv.setAttribute('aria-hidden','false');
+          invalidateAfterFrame(150);
+        }
+
+        // Send rating + refresh aggregates from Supabase
+        async function submitRating(shop, value, comment){
+          // 🔐 Verify helper shared by popup + detail (moderators only)
+async function verifyShopById(shopId){
+  if(!isModerator) return;
+  const s = shops.find(x=> String(x._id) === String(shopId));
+  if(!s) return;
+  const { error } = await supa.from('shops').update({
+    verification_status: 'verified',
+    verified_by: currentUser?.id || null,
+    verified_at: new Date().toISOString()
+  }).eq('id', s._id);
+  if(error) throw error;
+  s.verification_status = 'verified';
+  drawMarkers(true); renderList();
+  // if a popup is open for this marker, reopen to refresh its HTML
+  const m = markerById.get(s._id);
+  if(m){ m.closePopup(); m.openPopup(); }
+}
+
+          let userId=null;
+          try{
+            const { data } = await supa.auth.getUser();
+            userId = data?.user?.id ?? null;
+          }catch(_){}
+          const payload = { shop_id: shop._id, rating: value, comment: comment || null, user_id: userId };
+          const { error } = await supa.from('shop_ratings').insert([payload]);
+          if(error) throw error;
+
+          const { data: updated, error: e2 } = await supa
+            .from('shops').select('rating_avg,rating_count').eq('id', shop._id).single();
+          if(!e2 && updated){
+            shop.rating_avg = typeof updated.rating_avg === 'number' ? updated.rating_avg : shop.rating_avg;
+            shop.rating_count = typeof updated.rating_count === 'number' ? updated.rating_count : shop.rating_count;
+            shop.rating = Number.isFinite(shop.rating_avg) ? shop.rating_avg : shop.rating_admin;
+          }
+        }
+
+        // ===== Reset helpers =====
+        function resetAll(){
+          [vegChk,meatChk,saucesChk,breadChk].forEach(cb=>cb.checked=false);
+          selVeg = selMeat = selSauce = null;
+          syncSubRows && syncSubRows();
+          [prodK,prodD,prodB,cardChk,openNowChk,openAtChk,likedOnly].forEach(cb=> cb && (cb.checked=false));
+          if (openAtTime) openAtTime.value = '';
+          syncPriceCards && syncPriceCards();
+          dayChks.forEach(cb=>cb.checked=false);
+
+          const sideInputs=[document.getElementById('sKmax'),document.getElementById('sDmax'),document.getElementById('sBmax'),document.getElementById('sRmin')];
+          sideInputs.forEach(inp=>{ if(inp) inp.value=''; });
+
+          [pKmax,pDmax,pBmax].forEach(inp=>{ inp.value=inp.max; });
+
+          searchInput.value=''; setQuery('');
+          updateChipStyles(); updateFilterHUD(); drawMarkers(); renderList();
+          modal.style.display='none';
+        }
+        document.getElementById('emptyReset')?.addEventListener('click', resetAll);
+
+        // Initial draw
+        updateChipStyles(); drawMarkers(); renderList();
+
+        // Redraw on language change
+        I18N.onChange(()=>{
+          map.closePopup();
+          updateFilterHUD(); drawMarkers(); renderList();
+        });
+
+        invalidateAfterFrame(150);
+
+        const fbOv = document.getElementById('fbOverlay');
+        const fbClose = document.getElementById('fbClose');
+        const fbCancel = document.getElementById('fbCancel');
+        const fbSubmit = document.getElementById('fbSubmit');
+        const fbMsg = document.getElementById('fbMessage');
+        const fbContact = document.getElementById('fbContact');
+        let fbRating = 0;
+        let fbCats = new Set();
+
+        function openFeedbackModal(){
+          fbRating = 0; fbCats.clear();
+          if (fbMsg) fbMsg.value = '';
+          if (fbContact) fbContact.value = '';
+          document.querySelectorAll('[data-fb-star]').forEach(b => b.classList.remove('on'));
+          document.querySelectorAll('[data-fb-cat]').forEach(c => c.classList.remove('active'));
+          if (fbOv) fbOv.style.display='flex';
+        }
+        function closeFeedbackModal(){ if (fbOv) fbOv.style.display='none'; }
+
+        const fbHeaderBtn = document.getElementById('fbHeaderBtn');
+        const fbMobileBtn = document.getElementById('fbMobileBtn');
+        fbHeaderBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openFeedbackModal(); });
+        fbMobileBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openFeedbackModal(); });
+
+        fbClose ?.addEventListener('click', closeFeedbackModal);
+        fbCancel?.addEventListener('click', closeFeedbackModal);
+        fbOv   ?.addEventListener('click', (e)=>{ if(e.target===fbOv) closeFeedbackModal(); });
+
+        document.querySelectorAll('[data-fb-star]').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            fbRating = Number(btn.dataset.fbStar) || 0;
+            document.querySelectorAll('[data-fb-star]').forEach(b=>{
+              const n = Number(b.dataset.fbStar)||0;
+              b.classList.toggle('on', n <= fbRating);
+            });
+          });
+        });
+
+        document.querySelectorAll('[data-fb-cat]').forEach(chip=>{
+          chip.addEventListener('click', ()=>{
+            const val = chip.getAttribute('data-fb-cat');
+            if(fbCats.has(val)){ fbCats.delete(val); chip.classList.remove('active'); }
+            else { fbCats.add(val); chip.classList.add('active'); }
+          });
+        });
+
+        fbSubmit?.addEventListener('click', async ()=>{
+          const payload = {
+            rating: fbRating || 0,
+            categories: [...fbCats],
+            message: (fbMsg?.value||'').trim(),
+            email: (fbContact?.value||'').trim() || null,
+            created_at: new Date().toISOString()
+          };
+          try{
+            const all = JSON.parse(localStorage.getItem('feedbacks')||'[]');
+            all.push(payload);
+            localStorage.setItem('feedbacks', JSON.stringify(all));
+          }catch(_){}
+          try{
+            if(window.supa){
+              await supa.from('site_feedback').insert([payload]);
+            }
+          }catch(_){}
+          try{
+            showToast(document.documentElement.lang==='de' ? 'Danke für dein Feedback!' : 'Thanks for your feedback!');
+          } catch(_){
+            alert(document.documentElement.lang==='de' ? 'Danke für dein Feedback!' : 'Thanks for your feedback!');
+          }
+          closeFeedbackModal();
+        });
+      });
+    </script>
+
+    <!-- Rating Modal -->
+     <!-- Reviews Modal -->
+<div id="reviewsOverlay" aria-hidden="true">
+  <div id="reviewsModal" role="dialog" aria-modal="true" aria-labelledby="reviewsTitle">
+    <div class="rev-head">
+      <div id="reviewsTitle" class="rev-title">Reviews</div>
+      <button id="reviewsClose" class="rev-close">✖</button>
+    </div>
+    <div id="reviewsList" class="rev-list"></div>
+  </div>
+</div>
+    <div id="rateOverlay" aria-hidden="true">
+      <div id="rateModal" role="dialog" aria-modal="true" aria-labelledby="rateTitle">
+        <div class="rate-head">
+          <div id="rateTitle" class="rate-title">Rate</div>
+          <button id="rateClose" class="rate-btn rate-cancel">✖</button>
+        </div>
+        <div class="rate-stars" id="rateStars">
+          <button class="star-btn" data-val="1">★</button>
+          <button class="star-btn" data-val="2">★</button>
+          <button class="star-btn" data-val="3">★</button>
+          <button class="star-btn" data-val="4">★</button>
+          <button class="star-btn" data-val="5">★</button>
+        </div>
+        <textarea id="rateComment" placeholder="Optional comment…"></textarea>
+        <div class="rate-actions">
+          <button id="rateCancel" class="rate-btn rate-cancel">Cancel</button>
+          <button id="rateSubmit" class="rate-btn rate-submit" disabled>Submit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth Modal (LOGIN ONLY) -->
+    <div id="authOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+      <div id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" style="width:min(420px,92vw);background:var(--card);color:var(--text);border:1px solid var(--ring); border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div id="authTitle" style="font-weight:900;font-size:18px">Anmelden</div>
+          <button id="authClose" class="rate-btn rate-cancel">✖</button>
+        </div>
+        <div style="display:grid;gap:10px">
+          <input id="authEmail" type="email" placeholder="E-Mail" autocomplete="email" class="donerd-input" />
+          <div style="position:relative">
+            <input id="authPassword" type="password" placeholder="Passwort" class="donerd-input" />
+            <button id="toggleLoginPassword" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+          </div>
+          <div id="authError" style="min-height:18px;color:#ef4444;font-weight:700;font-size:12px"></div>
+          <div style="display:flex;gap:8px">
+            <button id="authSignIn" class="rate-btn rate-submit" style="flex:1">Einloggen</button>
+            <button id="authSignUp" class="rate-btn" style="flex:1;background:#e5e7eb;color:#111">Konto erstellen</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+            <div style="height:1px;background:var(--ring);flex:1"></div>
+            <small style="opacity:.7">oder</small>
+            <div style="height:1px;background:var(--ring);flex:1"></div>
+          </div>
+          <button id="authGitHub" class="rate-btn" style="width:100%;background:#111;color:#fff">Mit GitHub anmelden</button>
+
+          <small style="opacity:.7;display:block;text-align:center;margin-top:10px">
+            Durch die Anmeldung stimmst du unseren Nutzungsbedingungen zu.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div id="signupOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+      <div id="signupModal" role="dialog" aria-modal="true" aria-labelledby="signupTitle" style="width:min(460px,92vw);background:var(--card);color:var(--text);border:1px solid var(--ring); border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div id="signupTitle" style="font-weight:900;font-size:18px">Konto erstellen</div>
+          <button id="signupClose" class="rate-btn rate-cancel">✖</button>
+        </div>
+
+        <div style="display:grid;gap:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <input id="signupName" type="text" placeholder="Vorname" class="donerd-input" />
+            <input id="signupSurname" type="text" placeholder="Nachname" class="donerd-input" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 120px;gap:8px">
+            <input id="signupEmail" type="email" placeholder="E-Mail" autocomplete="email" class="donerd-input" />
+            <input id="signupAge" type="number" min="1" max="120" placeholder="Alter" class="donerd-input" />
+          </div>
+
+          <div style="position:relative">
+            <input id="signupPassword" type="password" placeholder="Passwort" class="donerd-input" />
+            <button id="toggleSignupPassword" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+          </div>
+          <div style="position:relative">
+            <input id="signupPassword2" type="password" placeholder="Passwort wiederholen" class="donerd-input" />
+            <button id="toggleSignupPassword2" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+          </div>
+
+          <div id="authErrorSignup" style="min-height:18px;color:#ef4444;font-weight:700;font-size:12px"></div>
+
+          <button id="signupSubmit" class="rate-btn rate-submit" style="width:100%">Registrieren</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="fbOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+      <div id="fbModal" role="dialog" aria-modal="true" aria-labelledby="fbTitle" style="width:min(520px,94vw);background:var(--card);color:var(--text);border:1px solid var(--ring); border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div id="fbTitle" style="font-weight:900;font-size:18px">Feedback</div>
+          <button id="fbClose" class="rate-btn rate-cancel">✖</button>
+        </div>
+
+        <div style="display:grid;gap:12px">
+          <!-- Stars -->
+          <div style="display:flex;gap:8px;align-items:center">
+            <small style="opacity:.8">Bewertung:</small>
+            <div>
+              <button class="star-btn" data-fb-star="1">★</button>
+              <button class="star-btn" data-fb-star="2">★</button>
+              <button class="star-btn" data-fb-star="3">★</button>
+              <button class="star-btn" data-fb-star="4">★</button>
+              <button class="star-btn" data-fb-star="5">★</button>
+            </div>
+          </div>
+
+          <!-- Categories -->
+          <div style="display:grid;gap:8px">
+            <small style="opacity:.8">Was trifft zu?</small>
+            <div class="chip-row">
+              <label class="chip" data-fb-cat="bug">🐞 Bug</label>
+              <label class="chip" data-fb-cat="idea">💡 Idee</label>
+              <label class="chip" data-fb-cat="ux">🎛️ Bedienung</label>
+              <label class="chip" data-fb-cat="data">📊 Daten</label>
+              <label class="chip" data-fb-cat="perf">⚡ Performance</label>
+            </div>
+          </div>
+
+          <!-- Message -->
+          <textarea id="fbMessage" class="donerd-input" style="min-height:92px" placeholder="Deine Nachricht …"></textarea>
+
+          <!-- Contact (optional) -->
+          <input id="fbContact" class="donerd-input" type="email" placeholder="Kontakt (optional)" autocomplete="email" />
+
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button id="fbCancel" class="rate-btn rate-cancel">Abbrechen</button>
+            <button id="fbSubmit" class="rate-btn rate-submit">Senden</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="donerdToast" role="status" aria-live="polite"></div>
+
+    <!-- (Optional) Bottom navigation for mobile -->
+    <nav id="bottomNav">
+      <button id="bnMap"><span>🗺️</span><small>Map</small></button>
+      <button id="bnList"><span>📋</span><small>List</small></button>
+      <button id="fbMobileBtn"><span>💬</span><small>Feedback</small></button>
+    </nav>
+  </div> <!-- /#detailOverlay wrapper that started earlier -->
+
+</body>
+</html>

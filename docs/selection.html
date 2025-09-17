@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dönerd – Preisliste</title>
+
+  <style>
+    :root{
+      --bg:#f0f2f5; --text:#0f172a; --muted:#64748b; --card:#ffffff;
+      --ring:#e5e7eb; --chip:#eef2f7; --chipText:#0f172a;
+      --accent:#fb923c; --accent-strong:#f97316;
+      --shadow:0 10px 28px rgba(0,0,0,.16);
+      --nav-pill-w:140px;
+      --topbar-h:64px; --gap-top:16px;
+      --surface: rgba(255,255,255,.66);
+    }
+    @media (max-width:600px){ :root{ --topbar-h:56px; --gap-top:8px; } }
+
+    html[data-theme="dark"]{
+      --bg:#0b0f14; --text:#e5e7eb; --muted:#9aa4b2; --card:#0f172a;
+      --ring:#1f2937; --chip:#0b1220; --chipText:#e5e7eb;
+      --shadow:0 16px 40px rgba(0,0,0,.5);
+      --surface: rgba(255,255,255,.06);
+    }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: Arial, sans-serif; }
+    button { font:inherit; }
+    img{ max-width:100%; height:auto; }
+
+    /* ===== Topbar ===== */
+    #navbar{
+      position:fixed; top:0; left:0; right:0;
+      height:var(--topbar-h);
+      display:flex; align-items:center; justify-content:center;
+      padding:0 8px; z-index:1000; background:transparent;
+      backdrop-filter: blur(10px);
+    }
+    @media (max-width:600px){
+      #navbar{ background:rgba(15,23,42,.88); border-bottom:1px solid var(--ring); }
+      html[data-theme="light"] #navbar{ background:rgba(255,255,255,.88); }
+    }
+    .nav-inner{width:100%; max-width:1200px; display:flex; align-items:center; justify-content:flex-start; gap:12px}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:900; font-size:28px; padding-left:6px; flex:0 0 auto}
+    .brand .dot{width:12px; height:12px; border-radius:50%; background:#ff385c; display:inline-block}
+
+    .searchbar{flex:0 1 620px; display:flex; align-items:center; background:var(--card); border-radius:999px; box-shadow:var(--shadow); padding:6px; min-width:240px; max-width:620px; border:1px solid var(--ring); margin-left:12px}
+    .search-seg{flex:1; display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:999px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .search-seg:hover{background:rgba(0,0,0,.04)}
+    html[data-theme="dark"] .search-seg:hover{background:rgba(255,255,255,.05)}
+    .seg-icon{width:20px; height:20px; display:inline-grid; place-items:center; border-radius:6px; background:#f3f4f6; font-size:14px}
+    html[data-theme="dark"] .seg-icon{background:#111827; color:#e5e7eb}
+    .seg-input{flex:1; display:flex; align-items:center; gap:8px; min-width:0}
+    .seg-input input{width:100%; border:0; outline:0; background:transparent; color:var(--text); font:inherit}
+
+    .right-actions{display:flex; align-items:center; gap:10px; margin-left:auto}
+    .action-pill{display:flex; align-items:center; gap:8px; padding:8px 14px; background:var(--card); border:1px solid var(--ring); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.06); font-weight:700; white-space:nowrap; cursor:pointer; color:var(--text)}
+    .action-pill:hover{background:rgba(0,0,0,.04)}
+    html[data-theme="dark"] .action-pill:hover{background:rgba(255,255,255,.05)}
+    .action-icon{width:18px; height:18px; display:inline-grid; place-items:center; border-radius:50%; background:#f3f4f6; font-size:12px; color:#374151}
+    html[data-theme="dark"] .action-icon{background:#111827; color:#e5e7eb}
+    .action-pill.is-active{ background:var(--accent); color:#000; border-color:transparent; box-shadow:0 6px 16px rgba(249,115,22,.35); }
+
+    .lang-toggle{display:inline-flex; background:var(--card); border:1px solid var(--ring); border-radius:999px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .lang-toggle button{min-width:60px; padding:8px 12px; font-weight:800; border:0; background:transparent; cursor:pointer; line-height:1; color:var(--text)}
+    .lang-toggle button+button{border-left:1px solid var(--ring)}
+    .lang-toggle button.is-active{background:var(--accent); color:#000}
+
+    /* ===== Mobile menu ===== */
+    #menuBtn{ display:none; }
+    #mobileMenu{
+      display:none; position:absolute; top:calc(var(--topbar-h) + 6px); right:8px;
+      width:min(92vw, 340px);
+      background:var(--card); color:var(--text);
+      border:1px solid var(--ring); border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,.36);
+      z-index:1200; padding:8px;
+    }
+    #mobileMenu.open{ display:block; }
+    #mobileMenu .menu-group{ display:grid; gap:6px; padding:8px; border-bottom:1px solid var(--ring); }
+    #mobileMenu .menu-group:last-child{ border-bottom:0; }
+    #mobileMenu .menu-item{
+      display:flex; align-items:center; gap:8px;
+      padding:9px 10px; border-radius:10px; border:1px solid var(--ring);
+      background:var(--card); cursor:pointer; text-decoration:none; color:inherit; font-weight:800; font-size:14px;
+    }
+    #mobileMenu .menu-item:hover{ background:rgba(0,0,0,.04); }
+    html[data-theme="dark"] #mobileMenu .menu-item:hover{ background:rgba(255,255,255,.06); }
+    #mobileMenu .menu-item.is-active{
+      background: var(--accent);
+      color:#000;
+      border-color: transparent;
+      box-shadow: 0 6px 16px rgba(249,115,22,.35);
+    }
+
+    @media (max-width:600px){
+      .brand{ font-size:20px; padding-left:2px; }
+      .searchbar{ min-width:0; max-width:100%; padding:3px; border-radius:12px; }
+      .search-seg{ padding:7px 10px; gap:8px; }
+      .seg-icon{ width:16px; height:16px; font-size:11px; }
+      .seg-input input{ font-size:13px; }
+      .right-actions{ display:none; }
+      #menuBtn{
+        display:inline-flex; margin-left:auto;
+        align-items:center; gap:6px; padding:7px 10px;
+        background:var(--card); border:1px solid var(--ring); border-radius:10px;
+        box-shadow:0 1px 6px rgba(0,0,0,.08); font-weight:800; cursor:pointer; color:var(--text); font-size:13px;
+      }
+    }
+
+    /* ===== Page ===== */
+    .page{ padding-top: calc(var(--topbar-h) + var(--gap-top)); }
+    .wrap{ display:flex; justify-content:center; padding:20px; }
+    .card{ width:min(1100px,96vw); background:var(--card); border-radius:20px; box-shadow:var(--shadow); border:1px solid var(--ring); overflow:visible; }
+
+    /* ===== Hero header ===== */
+    .hero{
+      position:relative; padding:22px 22px 18px;
+      background:
+        radial-gradient(1200px 400px at 80% -40%, rgba(251,146,60,.35), transparent 60%),
+        radial-gradient(900px 300px   at 0%   0%, rgba(253,186,116,.25), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
+    }
+    html[data-theme="dark"] .hero{
+      background:
+        radial-gradient(1200px 400px at 80% -40%, rgba(251,146,60,.25), transparent 60%),
+        radial-gradient(900px 300px   at 0%   0%, rgba(253,186,116,.18), transparent 60%),
+        linear-gradient(180deg, rgba(15,23,42,.92), rgba(15,23,42,.88));
+    }
+    .hero-top{ display:flex; align-items:center; gap:10px; }
+    .pin{ width:28px; height:28px; display:grid; place-items:center; border-radius:8px; background:#fff; border:1px solid var(--ring); box-shadow:0 2px 8px rgba(0,0,0,.06); }
+    html[data-theme="dark"] .pin{ background:#0b1220; }
+    .title{ font-size:30px; font-weight:900; margin:0; }
+    .subtitle{ color:var(--muted); margin:6px 0 0; }
+    .hero-stats{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .stat-pill{
+      display:inline-flex; align-items:center; gap:8px; padding:8px 12px;
+      border:1px solid var(--ring); border-radius:12px; background:var(--chip);
+      font-weight:800; color:var(--chipText); font-size:13px;
+    }
+
+    /* ===== Top controls ===== */
+    .top-controls{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+      padding:12px 22px; border-top:1px solid var(--ring); background:var(--card);
+    }
+    .searchbar-inline{ display:flex; align-items:center; gap:8px; background:var(--chip); border:1px solid var(--ring); border-radius:12px; padding:8px 10px; min-width:240px; }
+    .searchbar-inline input{ border:0; outline:0; background:transparent; color:var(--text); width:220px; }
+    .sort-select{ border:1px solid var(--ring); background:var(--card); color:var(--text); border-radius:12px; padding:8px 12px; font-weight:800; }
+    .toolbar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .small-pill{ display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:999px; background:var(--chip); border:1px solid var(--ring); font-weight:800; cursor:pointer; }
+    .btn-ghost{ border:1px solid var(--ring); background:var(--card); color:var(--text); border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer; }
+
+    /* ===== Meta & list ===== */
+    .meta{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 22px; color:var(--muted); font-size:13px; }
+    .list{ display:grid; grid-template-columns:1fr; gap:12px; padding:0 22px 22px; }
+    .item{
+      display:grid; grid-template-columns: 92px 1fr; gap:12px;
+      align-items:start; background:var(--surface); border:1px solid var(--ring);
+      border-radius:16px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,.06);
+    }
+    .thumb{ width:92px; height:92px; border-radius:12px; object-fit:cover; background:#0002; cursor:pointer; }
+    .main{ display:grid; gap:6px; min-width:0 }
+    .row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .item h4{ margin:0; font-size:16px; font-weight:900; line-height:1.2; }
+    .line{ color:var(--muted); font-size:12px; }
+
+    .price-pill{
+      display:inline-flex; align-items:center; gap:6px;
+      background:#f8fafc; color:#0f172a; border:1px solid var(--ring);
+      border-radius:12px; padding:6px 10px; font-weight:800; font-size:13px;
+    }
+    html[data-theme="dark"] .price-pill{ background:#0b1220; color:#e5e7eb; }
+
+    .rating-pill{ display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:6px 10px; font-weight:800; border:1px solid; }
+    .rating-user{ background:#fff7ed; color:#7c2d12; border-color:#fed7aa; }
+    html[data-theme="dark"] .rating-user{ background:#2a1709; color:#ffd2a1; border-color:#7a4b27; }
+    .rating-admin{ background:#e0f2fe; color:#0c4a6e; border-color:#7dd3fc; }
+    html[data-theme="dark"] .rating-admin{ background:#072534; color:#93c5fd; border-color:#1e3a8a; }
+
+    .meta-pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:var(--chip); color:var(--chipText); border:1px solid var(--ring); font-weight:800; font-size:12px; }
+    .badge{ font-size:11px; padding:2px 6px; border-radius:999px; background:var(--chip); border:1px solid var(--ring); }
+    .badge.min{ background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.35); }
+    .badge.max{ background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.35); }
+
+    .btn-nav{ padding:8px 12px; border:1px solid var(--ring); border-radius:999px; background:var(--card); font-weight:800; color:#0f172a; }
+    html[data-theme="dark"] .btn-nav{ color:#e5e7eb; }
+
+    .fav-btn{ display:inline-grid; place-items:center; width:34px; height:34px; border-radius:999px; border:1px solid var(--ring); background:var(--card); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.08); color:#ef4444; }
+    .fav-btn.on{ background:#fee2e2; border-color:#fecaca; }
+
+    /* Empty */
+    .empty{ padding:18px; margin:8px 22px 22px; border:1px dashed var(--ring); border-radius:12px; color:var(--muted); display:flex; align-items:center; gap:10px; }
+    .empty button{ margin-left:auto; }
+
+    /* Carousel modal */
+    .ov{ position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:1200; }
+    .ov.open{ display:flex; }
+    .car{ width:min(900px,92vw); background:var(--card); color:var(--text); border:1px solid var(--ring); border-radius:14px; box-shadow:0 12px 30px rgba(0,0,0,.35); padding:10px; }
+    .car-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .car-track{ position:relative; overflow:hidden; border-radius:10px; }
+    .car-inner{ display:flex; transition:transform .25s ease; }
+    .car-inner img{ width:min(900px,92vw); height:min(65vh,560px); object-fit:cover; flex:0 0 auto; }
+    .car-controls{ display:flex; justify-content:space-between; margin-top:8px; }
+    .car-btn{ border:1px solid var(--ring); background:var(--card); color:var(--text); padding:8px 12px; border-radius:10px; font-weight:900; cursor:pointer; }
+
+    /* Toast */
+    #donerdToast{
+      position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+      background:#111; color:#fff; border-radius:999px; padding:10px 14px;
+      box-shadow:0 6px 18px rgba(0,0,0,.35); z-index:1400; display:none; font-weight:800
+    }
+    html[data-theme="dark"] #donerdToast{ background:#0f172a }
+    #donerdToast.show{ display:block; animation:toastfade .25s ease both }
+    @keyframes toastfade{ from{opacity:0; transform:translate(-50%,8px)} to{opacity:1; transform:translate(-50%,0)} }
+
+    /* Print */
+    @media print{
+      #navbar, .hero, .top-controls, .btn-nav, .fav-btn { display:none !important; }
+      .page{ padding-top:0; }
+      .wrap{ padding:0; }
+      .card{ border:0; box-shadow:none; }
+      .item{ page-break-inside:avoid; }
+    }
+
+    /* ===== Tablet squeeze ===== */
+    @media (max-width:720px){
+      .item{ grid-template-columns:72px 1fr; gap:10px; }
+      .thumb{ width:72px; height:72px; }
+    }
+
+    /* ===== Mobile refinements (≤600px) ===== */
+    @media (max-width:600px){
+      .wrap{ padding:14px; }
+      .card{ border-radius:16px; }
+      .hero{ padding:16px; }
+      .title{ font-size:22px; }
+      .subtitle{ font-size:13px; }
+
+      .hero-stats{ gap:6px; }
+      .stat-pill{ padding:6px 10px; font-size:12px; }
+
+      .top-controls{
+        display:grid; grid-template-columns:1fr; gap:8px; padding:10px 14px;
+      }
+      .searchbar-inline{ width:100%; padding:7px 9px; }
+      .searchbar-inline input{ width:100%; font-size:14px; }
+      .toolbar{
+        gap:6px; overflow:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px;
+      }
+      .toolbar::-webkit-scrollbar{ display:none; }
+      .sort-select{ padding:7px 10px; font-size:13px; }
+      .small-pill, .btn-ghost{ padding:7px 10px; font-size:13px; border-radius:999px; }
+
+      .meta{ padding:8px 14px; font-size:12px; }
+      .list{ gap:10px; padding:0 14px 14px; }
+      .item{ padding:10px; border-radius:12px; }
+      .thumb{ width:64px; height:64px; border-radius:10px; }
+      .item h4{ font-size:15px; }
+      .line{ font-size:11.5px; }
+
+      .price-pill{ padding:5px 8px; font-size:12px; }
+      .rating-pill{ padding:5px 8px; font-size:12px; }
+
+      .btn-nav{ padding:7px 10px; font-size:13px; }
+      .fav-btn{ width:30px; height:30px; box-shadow:0 1px 6px rgba(0,0,0,.08); }
+
+      .row{ gap:6px; }
+      .empty{ margin:8px 14px 14px; padding:14px; }
+      .car-btn{ padding:7px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== Topbar ===== -->
+  <div id="navbar">
+    <div class="nav-inner">
+      <div class="brand" aria-label="Dönerd">
+        <span class="dot"></span><span>Dönerd</span>
+      </div>
+
+      <div class="searchbar" role="group" aria-label="Primary actions">
+        <div class="search-seg" id="seg-looking">
+          <span class="seg-icon" aria-hidden="true">🏠</span>
+          <label class="seg-input" for="navSearchInput">
+            <input id="navSearchInput" type="text" data-i18n-placeholder="nav.search_ph"
+                   placeholder="Suche nach Name, Straße, Tags … (z.B. falafel, scharf)" aria-label="Kebab-Läden suchen" />
+          </label>
+        </div>
+      </div>
+
+      <div class="right-actions">
+        <!-- Map -->
+        <button class="action-pill" id="mapBtn" onclick="location.href='index.html'">
+          <span class="action-icon">🗺️</span><span data-i18n="nav.map">Karte</span>
+        </button>
+
+        <!-- Preisliste (active) -->
+        <button class="action-pill is-active" aria-current="page" onclick="location.href='selection.html'">
+          <span class="action-icon">📋</span><span data-i18n="nav.selection">Preisliste</span>
+        </button>
+
+        <!-- Shop hinzufügen -->
+        <button class="action-pill" onclick="location.href='add-shop.html'">
+          <span class="action-icon">➕</span><span data-i18n="nav.add">Shop hinzufügen</span>
+        </button>
+
+        <!-- Feedback -->
+        <button class="action-pill" onclick="location.href='feedback.html'">
+          <span class="action-icon">💬</span><span data-i18n="nav.feedback">Feedback</span>
+        </button>
+
+        <!-- About -->
+        <button class="action-pill" onclick="location.href='about.html'">
+          <span class="action-icon">👤</span><span data-i18n="nav.about">Über den Gründer</span>
+        </button>
+
+        <!-- Dark -->
+        <button class="action-pill" id="themeBtn">
+          <span class="action-icon" id="themeIcon">🌙</span><span id="themeText" data-i18n="ui.dark">Dunkel</span>
+        </button>
+
+        <!-- Login/Profile -->
+        <button class="action-pill" id="loginBtn">
+          <span class="action-icon">🔑</span><span id="loginText" data-i18n="auth.login">Login</span>
+        </button>
+
+        <!-- Language -->
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+
+      <!-- Phone: dropdown trigger + menu -->
+      <button id="menuBtn" aria-haspopup="true" aria-expanded="false" title="Menu" data-i18n="ui.menu">Menü</button>
+      <div id="mobileMenu" role="menu" aria-label="Mobile Menu">
+        <div class="menu-group" aria-label="Navigation">
+          <a class="menu-item" href="index.html">🗺️ <span data-i18n="nav.map">Karte</span></a>
+          <a class="menu-item" href="selection.html">📋 <span data-i18n="nav.selection">Preisliste</span></a>
+          <a class="menu-item" href="add-shop.html">➕ <span data-i18n="nav.add">Shop hinzufügen</span></a>
+          <a class="menu-item" href="feedback.html">💬 <span data-i18n="nav.feedback">Feedback</span></a>
+          <a class="menu-item" href="about.html">👤 <span data-i18n="nav.about">Über den Gründer</span></a>
+        </div>
+        <div class="menu-group" aria-label="Account">
+          <button class="menu-item" id="mobileLogin">🔑 <span id="mobileLoginText" data-i18n="auth.login">Login</span></button>
+          <button class="menu-item" id="mobileTheme">🌓 <span id="mobileThemeText" data-i18n="ui.dark">Dunkel</span></button>
+        </div>
+        <div class="menu-group" aria-label="Language">
+          <div class="menu-item" style="justify-content:space-between">
+            <span>🌐 <span data-i18n="ui.language">Sprache</span></span>
+            <div class="lang-toggle" role="group" aria-label="Language in menu">
+              <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+              <button type="button" data-lang="en" aria-pressed="false">EN</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- /phone -->
+    </div>
+  </div>
+
+  <!-- ===== Page ===== -->
+  <div class="page">
+    <div class="wrap">
+      <div class="card">
+        <!-- Hero -->
+        <div class="hero">
+          <div class="hero-top">
+            <span class="pin">🍢</span>
+            <div>
+              <h1 class="title" data-i18n="sel.title">Preisliste</h1>
+              <p class="subtitle" data-i18n="sel.subtitle">Liste aller Läden mit Filtern für günstigste/teuerste Kebap, Dürüm, Box & Bewertung.</p>
+            </div>
+          </div>
+          <div class="hero-stats" id="heroStats"></div>
+        </div>
+
+        <!-- Top controls -->
+        <div class="top-controls">
+          <div class="searchbar-inline" role="search">
+            <span>🔎</span>
+            <input id="q" type="search" data-i18n-placeholder="nav.search_inline_ph" placeholder="Suche Name, Straße …" />
+          </div>
+
+          <div class="toolbar">
+            <select id="sort" class="sort-select" title="Sortieren">
+              <option value="rating_desc">⭐ Rating ↓</option>
+              <option value="rating_asc">⭐ Rating ↑</option>
+              <option value="kebap_asc">🥙 Kebap € ↑</option>
+              <option value="kebap_desc">🥙 Kebap € ↓</option>
+              <option value="durum_asc">🌯 Dürüm € ↑</option>
+              <option value="durum_desc">🌯 Dürüm € ↓</option>
+              <option value="box_asc">📦 Box € ↑</option>
+              <option value="box_desc">📦 Box € ↓</option>
+              <option value="name_asc">A → Z</option>
+              <option value="name_desc">Z → A</option>
+            </select>
+
+            <button id="favOnly" class="small-pill" aria-pressed="false" title="Nur Favoriten">
+              ❤️ <span data-i18n="sel.favorites">Favoriten</span>
+            </button>
+
+            <button id="exportCsv" class="btn-ghost" data-i18n="sel.export_csv">⬇️ CSV</button>
+            <button id="printBtn" class="btn-ghost" data-i18n="sel.print">🖨️ Print</button>
+          </div>
+        </div>
+
+        <div class="meta"><span id="count">0</span></div>
+        <div id="list" class="list"></div>
+
+        <div id="empty" class="empty" style="display:none">
+          <span data-i18n="sel.empty">😕 Keine Treffer.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carousel modal -->
+  <div id="ov" class="ov" aria-hidden="true">
+    <div class="car" role="dialog" aria-modal="true" aria-labelledby="carTitle">
+      <div class="car-head">
+        <div id="carTitle" style="font-weight:900">Fotos</div>
+        <button id="carClose" class="car-btn">✖</button>
+      </div>
+      <div class="car-track">
+        <div id="carInner" class="car-inner"></div>
+      </div>
+      <div class="car-controls">
+        <button id="carPrev" class="car-btn">⟵</button>
+        <button id="carNext" class="car-btn">⟶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Supabase ===== -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- ===== Auth Modals ===== -->
+  <div id="authOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+    <div id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle"
+        style="width:min(420px,92vw);background:var(--card);color:var(--text);border:1px solid var(--ring);
+              border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div id="authTitle" style="font-weight:900;font-size:18px" data-i18n="auth.title_login">Anmelden</div>
+        <button id="authClose" class="rate-btn" style="background:#e5e7eb;color:#111;border-radius:999px;padding:6px 10px;font-weight:800">✖</button>
+      </div>
+
+      <div style="display:grid;gap:10px">
+        <input id="authEmail" type="email" data-i18n-placeholder="auth.email_ph" placeholder="E-Mail" autocomplete="email"
+              style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+
+        <div style="position:relative">
+          <input id="authPassword" type="password" data-i18n-placeholder="auth.pass_ph" placeholder="Passwort"
+                 style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+          <button id="toggleLoginPassword" type="button"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+        </div>
+
+        <div id="authError" style="min-height:18px;color:#ef4444;font-weight:700;font-size:12px"></div>
+
+        <div style="display:flex;gap:8px">
+          <button id="authSignIn" class="rate-btn" style="flex:1;background:var(--accent);color:#000;border:0;border-radius:999px;padding:8px 14px;font-weight:800" data-i18n="auth.btn_signin">Einloggen</button>
+          <button id="authSignUp" class="rate-btn" style="flex:1;background:#e5e7eb;color:#111;border:0;border-radius:999px;padding:8px 14px;font-weight:800" data-i18n="auth.btn_signup">Konto erstellen</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+          <div style="height:1px;background:var(--ring);flex:1"></div>
+          <small style="opacity:.8;font-weight:800" data-i18n="auth.or">oder</small>
+          <div style="height:1px;background:var(--ring);flex:1"></div>
+        </div>
+
+        <button id="authGitHub" class="rate-btn" style="width:100%;background:#111;color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:800" data-i18n="auth.btn_github">
+          Mit GitHub fortfahren
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="signupOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+    <div id="signupModal" role="dialog" aria-modal="true" aria-labelledby="signupTitle"
+        style="width:min(420px,92vw);background:var(--card);color:var(--text);border:1px solid var(--ring);
+              border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div id="signupTitle" style="font-weight:900;font-size:18px" data-i18n="auth.title_signup">Konto erstellen</div>
+        <button id="signupClose" class="rate-btn" style="background:#e5e7eb;color:#111;border-radius:999px;padding:6px 10px;font-weight:800">✖</button>
+      </div>
+
+      <div style="display:grid;gap:10px">
+        <input id="signupName"     type="text"     placeholder="Vorname"    data-i18n-placeholder="auth.first_ph"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+        <input id="signupSurname"  type="text"     placeholder="Nachname"   data-i18n-placeholder="auth.last_ph"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+        <input id="signupAge"      type="number"   placeholder="Alter"      data-i18n-placeholder="auth.age_ph"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+        <input id="signupEmail"    type="email"    placeholder="E-Mail"     data-i18n-placeholder="auth.email_ph"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+
+        <div style="position:relative">
+          <input id="signupPassword"  type="password" placeholder="Passwort" data-i18n-placeholder="auth.pass_ph"
+                 style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+          <button id="toggleSignupPassword" type="button"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+        </div>
+
+        <div style="position:relative">
+          <input id="signupPassword2" type="password" placeholder="Passwort wiederholen" data-i18n-placeholder="auth.pass_repeat_ph"
+                 style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+          <button id="toggleSignupPassword2" type="button"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+        </div>
+
+        <div id="authErrorSignup" style="min-height:18px;color:#ef4444;font-weight:700;font-size:12px"></div>
+        <button id="signupSubmit" class="rate-btn" style="width:100%;background:var(--accent);color:#000;border:0;border-radius:999px;padding:8px 14px;font-weight:800" data-i18n="auth.btn_signup">Konto erstellen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast element -->
+  <div id="donerdToast" role="status" aria-live="polite"></div>
+
+  <!-- ===== i18n ===== -->
+  <script>
+    const DICTS = {
+      de: {
+        nav:{
+          map:"Karte", selection:"Preisliste", add:"Shop hinzufügen", feedback:"Feedback", about:"Über den Gründer",
+          search_ph:"Suche nach Name, Straße, Tags … (z.B. falafel, scharf)",
+          search_inline_ph:"Suche Name, Straße …"
+        },
+        ui:{ dark:"Dunkel", light:"Hell", menu:"Menü", language:"Sprache" },
+        sel:{
+          title:"Preisliste",
+          subtitle:"Liste aller Läden mit Filtern für günstigste/teuerste Kebap, Dürüm, Box & Bewertung.",
+          favorites:"Favoriten",
+          export_csv:"⬇️ CSV",
+          print:"🖨️ Drucken",
+          empty:"😕 Keine Treffer.",
+          nav:"Navigieren",
+          shops:"Läden"
+        },
+        price:{ kebap:"Kebap €", durum:"Dürüm €", box:"Box €" },
+        stats:{ shops:"Läden", kebapFrom:"Kebap ab", durumFrom:"Dürüm ab", boxFrom:"Box ab" },
+        tags:{ veg:"Vegetarisch", cards:"Kartenzahlung" },
+        auth:{
+          login:"Login", profile:"Profil",
+          title_login:"Anmelden", title_signup:"Konto erstellen",
+          email_ph:"E-Mail", pass_ph:"Passwort", pass_repeat_ph:"Passwort wiederholen",
+          or:"oder",
+          btn_signin:"Einloggen", btn_signup:"Konto erstellen",
+          btn_github:"Mit GitHub fortfahren",
+          err_fill:"Alle Felder ausfüllen.",
+          err_need_email_pass:"Bitte E-Mail und Passwort eingeben.",
+          err_pass_mismatch:"Passwörter stimmen nicht überein.",
+          ok_signed_in:"✅ Eingeloggt",
+          ok_signup_mail:"📨 Bitte bestätige deine E-Mail. Danach kannst du dich einloggen.",
+          first_ph:"Vorname", last_ph:"Nachname", age_ph:"Alter"
+        }
+      },
+      en: {
+        nav:{
+          map:"Map", selection:"Price list", add:"Add Shop", feedback:"Feedback", about:"About the Founder",
+          search_ph:"Search name, street, tags … (e.g. falafel, spicy)",
+          search_inline_ph:"Search name, street …"
+        },
+        ui:{ dark:"Dark", light:"Light", menu:"Menu", language:"Language" },
+        sel:{
+          title:"Price list",
+          subtitle:"All shops with filters for cheapest/most expensive Kebap, Durum, Box & rating.",
+          favorites:"Favorites",
+          export_csv:"⬇️ CSV",
+          print:"🖨️ Print",
+          empty:"😕 No results.",
+          nav:"Navigate",
+          shops:"shops"
+        },
+        price:{ kebap:"Kebap €", durum:"Durum €", box:"Kebab Box €" },
+        stats:{ shops:"shops", kebapFrom:"Kebap from", durumFrom:"Durum from", boxFrom:"Box from" },
+        tags:{ veg:"Vegetarian", cards:"Card payment" },
+        auth:{
+          login:"Login", profile:"Profile",
+          title_login:"Sign in", title_signup:"Create account",
+          email_ph:"Email", pass_ph:"Password", pass_repeat_ph:"Repeat password",
+          or:"or",
+          btn_signin:"Sign in", btn_signup:"Create account",
+          btn_github:"Continue with GitHub",
+          err_fill:"Please fill in all fields.",
+          err_need_email_pass:"Please enter email and password.",
+          err_pass_mismatch:"Passwords do not match.",
+          ok_signed_in:"✅ Signed in",
+          ok_signup_mail:"📨 Please confirm your email, then you can sign in.",
+          first_ph:"First name", last_ph:"Last name", age_ph:"Age"
+        }
+      }
+    };
+
+    const I18N = (() => {
+      let lang = 'de';
+      const get=(o,p)=>p.split('.').reduce((a,k)=> (a && a[k]!=null) ? a[k] : undefined, o);
+      const t=(k,fb)=>{ const v=get(DICTS[lang],k); return v==null ? (fb ?? k) : v; };
+
+      function apply(){
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          el.textContent = t(el.dataset.i18n, el.textContent.trim());
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+          el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder, el.getAttribute('placeholder')||''));
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+          el.setAttribute('title', t(el.dataset.i18nTitle, el.getAttribute('title')||''));
+        });
+
+        document.documentElement.lang = lang;
+
+        document.querySelectorAll('.lang-toggle [data-lang]').forEach(b=>{
+          const on=b.dataset.lang===lang;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+
+        const theme = document.documentElement.getAttribute('data-theme') || 'light';
+        const themeText = document.getElementById('themeText');
+        const mobileThemeText = document.getElementById('mobileThemeText');
+        if(themeText) themeText.textContent = (theme==='dark') ? t('ui.light') : t('ui.dark');
+        if(mobileThemeText) mobileThemeText.textContent = (theme==='dark') ? t('ui.light') : t('ui.dark');
+
+        const navInput = document.getElementById('navSearchInput');
+        if (navInput) navInput.setAttribute('placeholder', t('nav.search_ph'));
+        const inlineInput = document.getElementById('q');
+        if (inlineInput) inlineInput.setAttribute('placeholder', t('nav.search_inline_ph'));
+
+        const exportCsv = document.getElementById('exportCsv');
+        if (exportCsv) exportCsv.textContent = t('sel.export_csv');
+        const printBtn = document.getElementById('printBtn');
+        if (printBtn) printBtn.textContent = t('sel.print');
+
+        const empty = document.getElementById('empty')?.querySelector('span');
+        if (empty) empty.textContent = t('sel.empty');
+      }
+
+      function set(l){
+        lang = (l==='en') ? 'en' : 'de';
+        localStorage.setItem('lang', lang);
+        apply();
+        const loginText = document.getElementById('loginText');
+        const mobileLoginText = document.getElementById('mobileLoginText');
+        if(loginText && !loginText.textContent.startsWith('Hi,')){
+          loginText.textContent = t('auth.login');
+        }
+        if(mobileLoginText && !mobileLoginText.textContent.startsWith('Hi,')){
+          mobileLoginText.textContent = t('auth.login');
+        }
+      }
+
+      function init(){
+        const guess=(navigator.language||'').slice(0,2);
+        set(localStorage.getItem('lang') || (['de','en'].includes(guess)?guess:'de'));
+        document.addEventListener('click', e=>{
+          const btn = e.target.closest('.lang-toggle [data-lang]');
+          if(btn) set(btn.dataset.lang);
+        });
+      }
+
+      return { init, t, apply };
+    })();
+
+    document.addEventListener('DOMContentLoaded', I18N.init);
+  </script>
+
+  <!-- ===== Dark mode + navbar glue + mobile dropdown ===== -->
+  <script>
+    (function(){
+      const themeBtn  = document.getElementById('themeBtn');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeText = document.getElementById('themeText');
+
+      const menuBtn   = document.getElementById('menuBtn');
+      const mobileMenu= document.getElementById('mobileMenu');
+      const mobileThemeBtn = document.getElementById('mobileTheme');
+      const mobileThemeText= document.getElementById('mobileThemeText');
+
+      function setTheme(mode){
+        document.documentElement.setAttribute('data-theme', mode);
+        localStorage.setItem('theme', mode);
+        if(themeIcon) themeIcon.textContent = mode === 'dark' ? '🌞' : '🌙';
+        if(themeText) themeText.textContent = (mode === 'dark') ? I18N.t('ui.light') : I18N.t('ui.dark');
+        if(mobileThemeText) mobileThemeText.textContent = (mode === 'dark') ? I18N.t('ui.light') : I18N.t('ui.dark');
+      }
+
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(stored || (prefersDark ? 'dark' : 'light'));
+
+      themeBtn?.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+      mobileThemeBtn?.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+
+      function closeMenu(){
+        mobileMenu?.classList.remove('open');
+        menuBtn?.setAttribute('aria-expanded','false');
+      }
+
+      function markActiveMobile(){
+        const here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+        document.querySelectorAll('#mobileMenu .menu-item[href]').forEach(a=>{
+          const target = (a.getAttribute('href') || '').toLowerCase();
+          const match  = target === here || target === ('./' + here);
+          a.classList.toggle('is-active', match);
+          if (match) a.setAttribute('aria-current','page');
+          else a.removeAttribute('aria-current');
+        });
+      }
+
+      function toggleMenu(){
+        const open = !mobileMenu.classList.contains('open');
+        if(open){
+          mobileMenu.classList.add('open');
+          menuBtn.setAttribute('aria-expanded','true');
+          markActiveMobile();
+        } else {
+          closeMenu();
+        }
+      }
+
+      markActiveMobile();
+
+      menuBtn?.addEventListener('click', (e)=> { e.stopPropagation(); toggleMenu(); });
+      document.addEventListener('click', (e)=>{
+        if(!mobileMenu?.classList.contains('open')) return;
+        const inside = e.target.closest('#mobileMenu') || e.target.closest('#menuBtn');
+        if(!inside) closeMenu();
+      });
+      window.addEventListener('keydown', (e)=> { if(e.key === 'Escape') closeMenu(); });
+
+      const navInput = document.getElementById('navSearchInput');
+      const listInput = document.getElementById('q');
+      navInput?.addEventListener('input', ()=>{
+        if(listInput){ listInput.value = navInput.value; listInput.dispatchEvent(new Event('input')); }
+      });
+
+      window.closeMenu = closeMenu;
+    })();
+  </script>
+
+  <!-- ===== Supabase Auth glue ===== -->
+  <script>
+    const SUPABASE_URL  = 'https://bcxeaxhhhvagpvomtsyi.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGVheGhoaHZhZ3B2b210c3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTUxMzcsImV4cCI6MjA3MDgzMTEzN30.HCnWgapZrDY4RIgdXM5eh2UkslFpSSuJwEUszZHtp0w';
+    const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    let currentUser = null;
+    let myFavs = new Set();
+
+    function showToast(msg, ms=4200){
+      const t = document.getElementById('donerdToast');
+      if(!t) return alert(msg);
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(()=> t.classList.remove('show'), ms);
+    }
+
+    async function setUser(user){
+      currentUser = user;
+
+      const loginBtn = document.getElementById('loginBtn');
+      const loginText= document.getElementById('loginText');
+      const mobileLoginText= document.getElementById('mobileLoginText');
+
+      if (user) {
+        loginBtn.title = I18N.t('auth.profile');
+        const first = user.user_metadata?.first_name;
+        const label = first ? `Hi, ${first}` : I18N.t('auth.profile');
+        if(loginText) loginText.textContent = label;
+        if(mobileLoginText) mobileLoginText.textContent = label;
+        await loadFavorites();
+      } else {
+        loginBtn.title = I18N.t('auth.login');
+        if(loginText) loginText.textContent = I18N.t('auth.login');
+        if(mobileLoginText) mobileLoginText.textContent = I18N.t('auth.login');
+        myFavs.clear();
+      }
+      try{ render(); }catch(_){}
+    }
+
+    async function handleSession(session){
+      const user = session?.user ?? null;
+      if (user) {
+        try {
+          const display =
+            user.user_metadata?.user_name ||
+            user.user_metadata?.full_name ||
+            (user.email ? user.email.split('@')[0] : 'User');
+          await supa.from('profiles').upsert(
+            { id: user.id, display_name: display },
+            { onConflict: 'id' }
+          );
+        } catch(e){}
+      }
+      await setUser(user);
+    }
+
+    async function loadFavorites(){
+      if(!currentUser){ myFavs.clear(); return; }
+      const { data, error } = await supa.from('favorites').select('shop_id').eq('user_id', currentUser.id);
+      if(!error && Array.isArray(data)) myFavs = new Set(data.map(r=>String(r.shop_id)));
+    }
+
+    async function toggleFavorite(shopId){
+      if(!currentUser){
+        alert(document.documentElement.lang==='de'
+          ? 'Bitte einloggen, um Favoriten zu speichern.'
+          : 'Please log in to save favorites.');
+        return;
+      }
+      const id=String(shopId);
+      if(myFavs.has(id)){
+        await supa.from('favorites').delete().eq('user_id', currentUser.id).eq('shop_id', id);
+        myFavs.delete(id);
+      }else{
+        await supa.from('favorites').insert([{ user_id: currentUser.id, shop_id: id }]);
+        myFavs.add(id);
+      }
+      render();
+    }
+
+    // Auth modal helpers
+    function openAuth(){
+      const ov = document.getElementById('authOverlay');
+      document.getElementById('authTitle').textContent = I18N.t('auth.title_login');
+      const err = document.getElementById('authError'); if(err) err.textContent = '';
+      const em = document.getElementById('authEmail'); if(em) em.value='';
+      const pw = document.getElementById('authPassword'); if(pw) pw.value='';
+      ov.style.display = 'flex';
+    }
+    function closeAuth(){ document.getElementById('authOverlay').style.display = 'none'; }
+    function openSignup(){
+      closeAuth();
+      document.getElementById('signupTitle').textContent = I18N.t('auth.title_signup');
+      const e2 = document.getElementById('authErrorSignup'); if(e2){ e2.textContent=''; e2.style.color='#ef4444'; }
+      document.getElementById('signupOverlay').style.display = 'flex';
+    }
+    function closeSignup(){ document.getElementById('signupOverlay').style.display = 'none'; }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data:{ session } } = await supa.auth.getSession();
+      await handleSession(session);
+      supa.auth.onAuthStateChange(async (_event, session)=>{ await handleSession(session); });
+
+      document.getElementById('loginBtn')?.addEventListener('click', async () => {
+        const { data } = await supa.auth.getUser();
+        if (data?.user) { window.location.href = 'profile.html'; return; }
+        openAuth();
+      });
+
+      document.getElementById('mobileLogin')?.addEventListener('click', async () => {
+        const { data } = await supa.auth.getUser();
+        if (data?.user) { window.location.href = 'profile.html'; return; }
+        window.closeMenu?.(); openAuth();
+      });
+
+      document.getElementById('authClose')?.addEventListener('click', closeAuth);
+      document.getElementById('authOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='authOverlay') closeAuth(); });
+      document.getElementById('signupClose')?.addEventListener('click', closeSignup);
+      document.getElementById('signupOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='signupOverlay') closeSignup(); });
+
+      function togglePassword(inputId, btnId){
+        const input = document.getElementById(inputId);
+        const btn   = document.getElementById(btnId);
+        if (input && btn){
+          btn.type = 'button';
+          btn.addEventListener('click', (e)=>{ e.preventDefault(); input.type = input.type === 'password' ? 'text' : 'password'; });
+        }
+      }
+      togglePassword('authPassword','toggleLoginPassword');
+      togglePassword('signupPassword','toggleSignupPassword');
+      togglePassword('signupPassword2','toggleSignupPassword2');
+
+      document.getElementById('authSignUp')?.addEventListener('click', openSignup);
+
+      document.getElementById('authGitHub')?.addEventListener('click', async ()=> {
+        const redirectTo = location.origin;
+        await supa.auth.signInWithOAuth({ provider:'github', options:{ redirectTo, scopes:'read:user user:email' }});
+      });
+
+      document.getElementById('authSignIn')?.addEventListener('click', async () => {
+        const email = (document.getElementById('authEmail').value||'').trim();
+        const password = document.getElementById('authPassword').value||'';
+        const err = document.getElementById('authError');
+        err.textContent = '';
+        if (!email || !password) { err.textContent = I18N.t('auth.err_need_email_pass'); return; }
+        const { error } = await supa.auth.signInWithPassword({ email, password });
+        if (error) { err.textContent = error.message; return; }
+        const { data:{ session } } = await supa.auth.getSession();
+        await handleSession(session);
+        closeAuth(); try{ showToast(I18N.t('auth.ok_signed_in')); }catch(_){}
+      });
+
+      document.getElementById('signupSubmit')?.addEventListener('click', async () => {
+        const email     = (document.getElementById('signupEmail').value||'').trim();
+        const password  = document.getElementById('signupPassword').value||'';
+        const password2 = document.getElementById('signupPassword2').value||'';
+        const first     = document.getElementById('signupName').value||'';
+        const last      = document.getElementById('signupSurname').value||'';
+        const age       = parseInt(document.getElementById('signupAge').value,10)||null;
+        const err       = document.getElementById('authErrorSignup');
+
+        err.style.color = '#ef4444'; err.textContent = '';
+        if(!email || !password || !password2 || !first || !last || !age){ err.textContent = I18N.t('auth.err_fill'); return; }
+        if(password !== password2){ err.textContent = I18N.t('auth.err_pass_mismatch'); return; }
+
+        const { error } = await supa.auth.signUp({ email, password, options:{ data:{ first_name:first, last_name:last, age } }});
+        if(error){ err.textContent = error.message; return; }
+        err.style.color = '#16a34a'; err.textContent = I18N.t('auth.ok_signup_mail');
+        closeSignup(); try{ showToast(I18N.t('auth.ok_signup_mail')); }catch(_){}
+      });
+    });
+  </script>
+
+  <!-- ===== List app logic ===== -->
+  <script>
+    let shops=[];
+    const state={ q:'', sort:'rating_desc', favOnly:false };
+    const mins={kebap:Infinity,durum:Infinity,box:Infinity};
+    const maxs={kebap:-Infinity,durum:-Infinity,box:-Infinity};
+
+    const num = v => (typeof v==='number' && isFinite(v)) ? v : NaN;
+    const fmt = v => (typeof v==='number' && isFinite(v) && v>0) ? `€${v.toFixed(2)}` : '–';
+    const fmtRating = r => (typeof r==='number' && isFinite(r)) ? r.toFixed(1) : '—';
+
+    function computeExtrema(){
+      ['kebap','durum','box'].forEach(k=>{mins[k]=Infinity; maxs[k]=-Infinity;});
+      (shops||[]).forEach(s=>{
+        const p=s.prices||{};
+        ['kebap','durum','box'].forEach(k=>{
+          const v=num(p[k]);
+          if(!isNaN(v) && v>0){ mins[k]=Math.min(mins[k],v); maxs[k]=Math.max(maxs[k],v); }
+        });
+      });
+    }
+
+    function syncFavToggle(){
+      const b=document.getElementById('favOnly');
+      b.setAttribute('aria-pressed', state.favOnly ? 'true':'false');
+      if(!currentUser) b.title = document.documentElement.lang==='de'
+        ? 'Login nötig für Favoriten'
+        : 'Login required for favorites';
+    }
+
+    function renderHeroStats(){
+      const root = document.getElementById('heroStats');
+      const kMin = isFinite(mins.kebap) ? fmt(mins.kebap) : '–';
+      const dMin = isFinite(mins.durum) ? fmt(mins.durum) : '–';
+      const bMin = isFinite(mins.box)   ? fmt(mins.box)   : '–';
+      const count = (shops||[]).length;
+      root.innerHTML = `
+        <span class="stat-pill">📍 ${count} ${I18N.t('sel.shops')}</span>
+        <span class="stat-pill">🥙 ${I18N.t('stats.kebapFrom')} ${kMin}</span>
+        <span class="stat-pill">🌯 ${I18N.t('stats.durumFrom')} ${dMin}</span>
+        <span class="stat-pill">📦 ${I18N.t('stats.boxFrom')} ${bMin}</span>
+      `;
+    }
+
+    function passes(s){
+      if(state.favOnly && !myFavs.has(String(s.id))) return false;
+      if(state.q){
+        const hay=[s.name||'', s.address||''].join(' ').toLowerCase();
+        if(!hay.includes(state.q.toLowerCase())) return false;
+      }
+      return true;
+    }
+
+    const sorters={
+      rating_desc:(a,b)=>((isFinite(b.rating)?b.rating:-1)-(isFinite(a.rating)?a.rating:-1)) || (a.name||'').localeCompare(b.name||''),
+      rating_asc :(a,b)=>((isFinite(a.rating)?a.rating:999)-(isFinite(b.rating)?b.rating:999)) || (a.name||'').localeCompare(b.name||''),
+      kebap_asc :(a,b)=>((a.prices.kebap??999)-(b.prices.kebap??999))|| (a.name||'').localeCompare(b.name||''),
+      kebap_desc:(a,b)=>((b.prices.kebap??-1)-(a.prices.kebap??-1)) || (a.name||'').localeCompare(b.name||''),
+      durum_asc :(a,b)=>((a.prices.durum??999)-(b.prices.durum??999))|| (a.name||'').localeCompare(b.name||''),
+      durum_desc:(a,b)=>((b.prices.durum??-1)-(a.prices.durum??-1)) || (a.name||'').localeCompare(b.name||''),
+      box_asc   :(a,b)=>((a.prices.box??999)-(b.prices.box??999))    || (a.name||'').localeCompare(b.name||''),
+      box_desc  :(a,b)=>((b.prices.box??-1)-(a.prices.box??-1))      || (a.name||'').localeCompare(b.name||''),
+      name_asc  :(a,b)=>(a.name||'').localeCompare(b.name||''),
+      name_desc :(a,b)=>(b.name||'').localeCompare(a.name||'')
+    };
+
+    function writeURL(){
+      const p=new URLSearchParams();
+      if(state.q) p.set('q',state.q);
+      if(state.sort!=='rating_desc') p.set('sort',state.sort);
+      if(state.favOnly) p.set('fav','1');
+      const q='?'+p.toString();
+      history.replaceState(null,'',q.length>1?q:' ');
+    }
+    function readURL(){
+      const p=new URLSearchParams(location.search);
+      state.q = p.get('q')||'';
+      state.sort = p.get('sort')||state.sort;
+      state.favOnly = p.get('fav')==='1';
+    }
+
+    function render(){
+      writeURL();
+
+      const list=document.getElementById('list');
+      const rows = (shops||[]).filter(passes).slice().sort(sorters[state.sort]||sorters.rating_desc);
+
+      document.getElementById('count').textContent = `${rows.length} ${I18N.t('sel.shops')}`;
+      document.getElementById('empty').style.display = rows.length? 'none':'flex';
+      list.innerHTML='';
+
+      rows.forEach(s=>{
+        const k=num(s?.prices?.kebap), d=num(s?.prices?.durum), b=num(s?.prices?.box);
+        const img = (s.image_urls && s.image_urls.length)
+          ? s.image_urls[0]
+          : `https://picsum.photos/seed/${encodeURIComponent(s.name||s.id)}/400/400`;
+
+        const userPill  = Number.isFinite(s.rating_avg)
+          ? `<span class="rating-pill rating-user">★ ${fmtRating(s.rating_avg)}${Number.isFinite(s.rating_count)?` (${s.rating_count})`:''}</span>` : '';
+        const adminPill = Number.isFinite(s.rating_admin)
+          ? `<span class="rating-pill rating-admin">★ ${fmtRating(s.rating_admin)}</span>` : '';
+
+        const veg  = s.vegetarian ? ` · 🥬 ${I18N.t('tags.veg')}` : '';
+        const card = s.card       ? ` · 💳 ${I18N.t('tags.cards')}` : '';
+
+        const favOn = myFavs.has(String(s.id)) ? 'on' : '';
+
+        const el=document.createElement('div'); el.className='item';
+        el.innerHTML=`
+          <img class="thumb" src="${img}" alt="" data-id="${s.id}">
+          <div class="main">
+            <div class="row">
+              <h4 style="margin-right:auto">${s.name||'–'}</h4>
+              ${userPill}${adminPill}
+              <button class="fav-btn ${favOn}" data-fav="${s.id}" title="Favorit">❤</button>
+            </div>
+            <div class="line">${fmt(k)} · ${fmt(d)} · ${fmt(b)} ${veg}${card}</div>
+            <div class="line">${s.address||''}</div>
+
+            <div class="row" style="margin-top:4px">
+              <span class="price-pill">🥙 ${I18N.t('price.kebap')} ${fmt(k)} ${(!isNaN(k)&&k>0&&k===mins.kebap)?'<span class="badge min">min</span>':''} ${(!isNaN(k)&&k>0&&k===maxs.kebap)?'<span class="badge max">max</span>':''}</span>
+              <span class="price-pill">🌯 ${I18N.t('price.durum')} ${fmt(d)} ${(!isNaN(d)&&d>0&&d===mins.durum)?'<span class="badge min">min</span>':''} ${(!isNaN(d)&&d>0&&d===maxs.durum)?'<span class="badge max">max</span>':''}</span>
+              <span class="price-pill">📦 ${I18N.t('price.box')} ${fmt(b)} ${(!isNaN(b)&&b>0&&b===mins.box)?'<span class="badge min">min</span>':''} ${(!isNaN(b)&&b>0&&b===maxs.box)?'<span class="badge max">max</span>':''}</span>
+
+              <a class="btn-nav" style="margin-left:auto" href="https://www.google.com/maps?q=${s.lat},${s.lng}" target="_blank" rel="noopener">${I18N.t('sel.nav')}</a>
+              <a class="btn-nav" href="index.html?focus=${encodeURIComponent(s.id)}" title="In Dönerd Karte öffnen">🗺️ Karte</a>
+              <button class="btn-nav photos" data-id="${s.id}" title="Fotos ansehen">🖼️ Fotos</button>
+            </div>
+          </div>`;
+        list.appendChild(el);
+      });
+      list.querySelectorAll('.photos').forEach(b=>{
+        b.addEventListener('click',()=> openCarousel(b.getAttribute('data-id')));
+      });
+      list.querySelectorAll('.thumb').forEach(img=>{
+        img.addEventListener('click',()=> openCarousel(img.getAttribute('data-id')));
+      });
+    } // <-- end render()
+
+    /* =======================
+       Carousel (photos modal)
+       ======================= */
+    let carIndex=0, carImages=[];
+    const ov=document.getElementById('ov');
+    const carInner=document.getElementById('carInner');
+
+    function openCarousel(id){
+      const s = shops.find(x=>String(x.id)===String(id));
+      if(!s) return;
+      carImages = (s.image_urls&&s.image_urls.length)? s.image_urls
+               : [`https://picsum.photos/seed/${encodeURIComponent(s.name||s.id)}/1200/800`];
+      carIndex=0;
+      document.getElementById('carTitle').textContent = s.name || 'Fotos';
+      carInner.innerHTML = carImages.map(u=>`<img src="${u}" alt="">`).join('');
+      updateCarousel();
+      ov.classList.add('open'); ov.setAttribute('aria-hidden','false');
+    }
+
+    function updateCarousel(){
+      const first = carInner.querySelector('img');
+      if(!first) return;
+      const w = first.getBoundingClientRect().width || 800;
+      carInner.style.transform = `translateX(${-carIndex*w}px)`;
+    }
+
+    document.getElementById('carPrev').onclick = ()=>{ carIndex=(carIndex-1+carImages.length)%carImages.length; updateCarousel(); };
+    document.getElementById('carNext').onclick = ()=>{ carIndex=(carIndex+1)%carImages.length; updateCarousel(); };
+    document.getElementById('carClose').onclick = ()=>{ ov.classList.remove('open'); ov.setAttribute('aria-hidden','true'); };
+    ov.addEventListener('click',(e)=>{ if(e.target===ov) document.getElementById('carClose').click(); });
+    window.addEventListener('keydown',(e)=>{ if(!ov.classList.contains('open')) return;
+      if(e.key==='ArrowLeft')  document.getElementById('carPrev').click();
+      if(e.key==='ArrowRight') document.getElementById('carNext').click();
+      if(e.key==='Escape')     document.getElementById('carClose').click();
+    });
+    window.addEventListener('resize', ()=>{ if(ov.classList.contains('open')) updateCarousel(); });
+
+    /* =======================
+       Export & Print
+       ======================= */
+    document.getElementById('exportCsv').addEventListener('click', ()=>{
+      const header=['id','name','address','lat','lng','kebap','durum','box','rating_avg','rating_admin','rating_count'];
+      const rows=(shops||[]).filter(passes).map(s=>{
+        const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+        return [
+          s.id,
+          esc(s.name||''),
+          esc(s.address||''),
+          s.lat, s.lng,
+          s.prices.kebap??'',
+          s.prices.durum??'',
+          s.prices.box??'',
+          Number.isFinite(s.rating_avg)?s.rating_avg:'',
+          Number.isFinite(s.rating_admin)?s.rating_admin:'',
+          Number.isFinite(s.rating_count)?s.rating_count:''
+        ].join(',');
+      });
+      const csv=[header.join(','), ...rows].join('\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='donerd-preisliste.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    document.getElementById('printBtn').addEventListener('click', ()=> window.print());
+
+    /* =======================
+       Inputs + URL state
+       ======================= */
+    document.getElementById('q').addEventListener('input', (e)=>{ state.q=e.target.value.trim(); render(); });
+    document.getElementById('sort').addEventListener('change', (e)=>{ state.sort=e.target.value; render(); });
+    document.getElementById('favOnly').addEventListener('click', ()=>{ state.favOnly=!state.favOnly; syncFavToggle(); render(); });
+
+    /* =======================
+       Load data (Supabase)
+       ======================= */
+    async function load(){
+      try{
+        const { data, error } = await supa
+          .from('shops')
+          .select(`id,name,address,lat,lng,
+                   price_kebap,price_durum,price_box,
+                   vegetarian,payment_cards,image_urls,
+                   rating_admin,rating_avg,rating_count`)
+          .order('name', { ascending: true });
+
+        if(error) throw error;
+
+        shops = (data||[]).map(r => {
+          const rating_admin = Number.isFinite(r.rating_admin) ? r.rating_admin : null;
+          const rating_avg   = Number.isFinite(r.rating_avg) ? r.rating_avg : null;
+          const rating_count = Number.isFinite(r.rating_count) ? r.rating_count : null;
+          const rating_effective = (rating_avg!=null) ? rating_avg : rating_admin;
+
+          const imgs = Array.isArray(r.image_urls) ? r.image_urls : (r.image_urls ? [r.image_urls] : []);
+
+          return {
+            id: r.id,
+            name: r.name,
+            address: r.address,
+            lat: r.lat, lng: r.lng,
+            prices: { kebap: r.price_kebap, durum: r.price_durum, box: r.price_box },
+            vegetarian: !!r.vegetarian,
+            card: !!r.payment_cards,
+            image_urls: imgs,
+            rating_admin, rating_avg, rating_count,
+            rating: rating_effective
+          };
+        });
+
+        computeExtrema();
+        renderHeroStats();
+        render();
+      }catch(err){
+        console.error('[selection] load error:', err);
+        document.getElementById('list').innerHTML =
+          `<div class="subtitle">${document.documentElement.lang==='de'
+            ? 'Fehler beim Laden aus Supabase.' : 'Error loading from Supabase.'}</div>`;
+      }
+    }
+
+    /* =======================
+       Bootstrap
+       ======================= */
+    (async function init(){
+      // Keep active user and favorites in sync
+      const { data:{ session } } = await supa.auth.getSession();
+      await (async s=>{ await setUser(s?.user ?? null); })(session);
+      supa.auth.onAuthStateChange(async (_e, session)=>{ await setUser(session?.user ?? null); });
+
+      // Read URL and sync controls
+      readURL();
+      document.getElementById('q').value = state.q;
+      document.getElementById('sort').value = state.sort;
+      syncFavToggle();
+
+      await load();
+    })();
+  </script>
+
+  <!-- Finalize -->
+</body>
+</html>

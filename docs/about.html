@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dönerd – Über den Gründer</title>
+
+  <style>
+    :root{
+      --bg:#f0f2f5; --text:#0f172a; --muted:#64748b; --card:#ffffff;
+      --ring:#e5e7eb; --chip:#eef2f7; --chipText:#0f172a;
+      --accent:#fb923c; --accent-strong:#f97316;
+      --shadow:0 10px 28px rgba(0,0,0,.16);
+      --nav-pill-w:140px;
+      --topbar-h: 64px; --gap-top: 16px;
+    }
+    @media (max-width:600px){ :root{ --topbar-h:56px; --gap-top:8px; } }
+
+    html[data-theme="dark"]{
+      --bg:#0b0f14; --text:#e5e7eb; --muted:#9aa4b2; --card:#0f172a;
+      --ring:#1f2937; --chip:#0b1220; --chipText:#e5e7eb;
+      --shadow:0 16px 40px rgba(0,0,0,.5);
+    }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: Arial, sans-serif; }
+    button { font:inherit; }
+    img{ max-width:100%; height:auto; }
+
+    /* ===== Topbar ===== */
+    #navbar{
+      position:fixed; top:0; left:0; right:0;
+      height:var(--topbar-h);
+      display:flex; align-items:center; justify-content:center;
+      padding:0 8px; z-index:1000; background:transparent;
+      backdrop-filter: blur(10px);
+    }
+    @media (max-width:600px){
+      #navbar{ background:rgba(15,23,42,.88); border-bottom:1px solid var(--ring); }
+      html[data-theme="light"] #navbar{ background:rgba(255,255,255,.88); }
+    }
+    .nav-inner{width:100%; max-width:1200px; display:flex; align-items:center; justify-content:flex-start; gap:12px}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:900; font-size:28px; padding-left:6px; flex:0 0 auto}
+    .brand .dot{width:12px; height:12px; border-radius:50%; background:#ff385c; display:inline-block}
+
+    .searchbar{flex:0 1 620px; display:flex; align-items:center; background:var(--card); border-radius:999px; box-shadow:var(--shadow); padding:6px; min-width:240px; max-width:620px; border:1px solid var(--ring); margin-left:12px}
+    .search-seg{flex:1; display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:999px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .search-seg:hover{background:rgba(0,0,0,.04)}
+    html[data-theme="dark"] .search-seg:hover{background:rgba(255,255,255,.05)}
+    .seg-icon{width:20px; height:20px; display:inline-grid; place-items:center; border-radius:6px; background:#f3f4f6; font-size:14px}
+    html[data-theme="dark"] .seg-icon{background:#111827; color:#e5e7eb}
+    .seg-input{flex:1; display:flex; align-items:center; gap:8px; min-width:0}
+    .seg-input input{width:100%; border:0; outline:0; background:transparent; color:var(--text); font:inherit}
+
+    .right-actions{display:flex; align-items:center; gap:10px; margin-left:auto}
+    .action-pill{display:flex; align-items:center; gap:8px; padding:8px 14px; background:var(--card); border:1px solid var(--ring); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.06); font-weight:700; white-space:nowrap; cursor:pointer; color:var(--text)}
+    .action-pill:hover{background:rgba(0,0,0,.04)}
+    html[data-theme="dark"] .action-pill:hover{background:rgba(255,255,255,.05)}
+    .action-icon{width:18px; height:18px; display:inline-grid; place-items:center; border-radius:50%; background:#f3f4f6; font-size:12px; color:#374151}
+    html[data-theme="dark"] .action-icon{background:#111827; color:#e5e7eb}
+    .action-pill.is-active{ background:var(--accent); color:#000; border-color:transparent; box-shadow:0 6px 16px rgba(249,115,22,.35); }
+
+    .lang-toggle{display:inline-flex; background:var(--card); border:1px solid var(--ring); border-radius:999px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .lang-toggle button{min-width:60px; padding:8px 12px; font-weight:800; border:0; background:transparent; cursor:pointer; line-height:1; color:var(--text)}
+    .lang-toggle button+button{border-left:1px solid var(--ring)}
+    .lang-toggle button.is-active{background:var(--accent); color:#000}
+
+    /* ===== Mobile-only menu button + dropdown ===== */
+    #menuBtn{ display:none; }
+    #mobileMenu{
+      display:none; position:absolute; top:calc(var(--topbar-h) + 6px); right:8px;
+      width:min(86vw, 320px);
+      background:var(--card); color:var(--text);
+      border:1px solid var(--ring); border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,.36);
+      z-index:1200; padding:8px;
+    }
+    #mobileMenu.open{ display:block; }
+    #mobileMenu .menu-group{ display:grid; gap:6px; padding:8px; border-bottom:1px solid var(--ring); }
+    #mobileMenu .menu-group:last-child{ border-bottom:0; }
+    #mobileMenu .menu-item{
+      display:flex; align-items:center; gap:8px;
+      padding:10px 12px; border-radius:10px; border:1px solid var(--ring);
+      background:var(--card); cursor:pointer; text-decoration:none; color:inherit; font-weight:800;
+    }
+    #mobileMenu .menu-item:hover{ background:rgba(0,0,0,.04); }
+    html[data-theme="dark"] #mobileMenu .menu-item:hover{ background:rgba(255,255,255,.06); }
+
+    /* Active item highlight in mobile menu */
+    #mobileMenu .menu-item.is-active{
+      background: var(--accent);
+      color:#000;
+      border-color: transparent;
+      box-shadow: 0 6px 16px rgba(249,115,22,.35);
+    }
+
+    @media (max-width:600px){
+      .brand{ font-size:20px; padding-left:2px; }
+      .searchbar{ min-width:0; max-width:100%; padding:4px; border-radius:12px; }
+      .search-seg{ padding:8px 10px; }
+      .seg-icon{ width:18px; height:18px; font-size:12px; }
+      .right-actions{ display:none; }
+      #menuBtn{
+        display:inline-flex; margin-left:auto;
+        align-items:center; gap:8px; padding:8px 12px;
+        background:var(--card); border:1px solid var(--ring); border-radius:12px;
+        box-shadow:0 2px 8px rgba(0,0,0,.06); font-weight:800; cursor:pointer; color:var(--text);
+      }
+    }
+
+    /* ===== Page ===== */
+    .page{ padding-top: calc(var(--topbar-h) + var(--gap-top)); }
+    .wrap{ display:flex; justify-content:center; padding:20px; }
+    .card{
+      width:min(680px,96vw); background:var(--card); border-radius:20px; box-shadow:var(--shadow);
+      border:1px solid var(--ring); padding:22px 22px 26px; position:relative;
+    }
+    .card::before{
+      content:""; position:absolute; inset:0 0 auto 0; height:4px; border-radius:20px 20px 0 0;
+      background:linear-gradient(90deg,#f97316 0%, #fb923c 45%, #60a5fa 100%);
+    }
+
+    .title{font-size:28px;font-weight:900;margin:8px 0 6px}
+    .subtitle{color:var(--muted);margin:0 0 16px}
+    .foot{margin-top:22px;font-size:14px;color:var(--muted)}
+    .btn{display:inline-block;margin-top:16px;background:var(--accent);color:#000;padding:10px 16px;border-radius:999px;font-weight:800;text-decoration:none}
+    .btn:hover{background:var(--accent-strong)}
+  </style>
+</head>
+<body>
+  <!-- ===== Topbar ===== -->
+  <div id="navbar">
+    <div class="nav-inner">
+      <div class="brand" aria-label="Dönerd">
+        <span class="dot"></span><span>Dönerd</span>
+      </div>
+
+      <div class="searchbar" role="group" aria-label="Primary actions">
+        <div class="search-seg" id="seg-looking">
+          <span class="seg-icon" aria-hidden="true">🏠</span>
+          <label class="seg-input" for="navSearchInput">
+            <input id="navSearchInput" type="text" data-i18n-placeholder="nav.search_ph"
+                   placeholder="Suche nach Name, Straße, Tags … (z.B. falafel, scharf)" aria-label="Kebab-Läden suchen" />
+          </label>
+        </div>
+      </div>
+
+      <div class="right-actions">
+        <!-- Map -->
+        <button class="action-pill" id="mapBtn" onclick="location.href='index.html'">
+          <span class="action-icon">🗺️</span><span data-i18n="nav.map">Karte</span>
+        </button>
+
+        <!-- Preisliste -->
+        <button class="action-pill" onclick="location.href='selection.html'">
+          <span class="action-icon">📋</span><span data-i18n="nav.selection">Preisliste</span>
+        </button>
+
+        <!-- Shop hinzufügen -->
+        <button class="action-pill" onclick="location.href='add-shop.html'">
+          <span class="action-icon">➕</span><span data-i18n="nav.add">Shop hinzufügen</span>
+        </button>
+
+        <!-- Feedback -->
+        <button class="action-pill" onclick="location.href='feedback.html'">
+          <span class="action-icon">💬</span><span data-i18n="nav.feedback">Feedback</span>
+        </button>
+
+        <!-- About (active) -->
+        <button class="action-pill is-active" aria-current="page" onclick="location.href='about.html'">
+          <span class="action-icon">👤</span><span data-i18n="nav.about">Über den Gründer</span>
+        </button>
+
+        <!-- Dark -->
+        <button class="action-pill" id="themeBtn">
+          <span class="action-icon" id="themeIcon">🌙</span><span id="themeText" data-i18n="ui.dark">Dunkel</span>
+        </button>
+
+        <!-- Login/Profile -->
+        <button class="action-pill" id="loginBtn">
+          <span class="action-icon">🔑</span><span id="loginText" data-i18n="auth.login">Login</span>
+        </button>
+
+        <!-- Language -->
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+
+      <!-- Phone: single dropdown trigger -->
+      <button id="menuBtn" aria-haspopup="true" aria-expanded="false" title="Menu" data-i18n="ui.menu">Menü</button>
+      <div id="mobileMenu" role="menu" aria-label="Mobile Menu">
+        <div class="menu-group" aria-label="Navigation">
+          <a class="menu-item" href="index.html">🗺️ <span data-i18n="nav.map">Karte</span></a>
+          <a class="menu-item" href="selection.html">📋 <span data-i18n="nav.selection">Preisliste</span></a>
+          <a class="menu-item" href="add-shop.html">➕ <span data-i18n="nav.add">Shop hinzufügen</span></a>
+          <a class="menu-item" href="feedback.html">💬 <span data-i18n="nav.feedback">Feedback</span></a>
+          <a class="menu-item" href="about.html">👤 <span data-i18n="nav.about">Über den Gründer</span></a>
+        </div>
+        <div class="menu-group" aria-label="Account">
+          <button class="menu-item" id="mobileLogin">🔑 <span id="mobileLoginText" data-i18n="auth.login">Login</span></button>
+          <button class="menu-item" id="mobileTheme">🌓 <span id="mobileThemeText" data-i18n="ui.dark">Dunkel</span></button>
+        </div>
+        <div class="menu-group" aria-label="Language">
+          <div class="menu-item" style="justify-content:space-between">
+            <span>🌐 <span data-i18n="ui.language">Sprache</span></span>
+            <div class="lang-toggle" role="group" aria-label="Language in menu">
+              <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+              <button type="button" data-lang="en" aria-pressed="false">EN</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Content ===== -->
+  <div class="page">
+    <main class="wrap">
+      <section class="card">
+        <h1 class="title" data-i18n="about.hey">Hey 👋</h1>
+        <p class="subtitle" data-i18n="about.line1">
+          Ich bin einfach nur ein Typ, der Döner liebt – und deshalb diese kleine Website gebaut hat.
+        </p>
+        <p data-i18n="about.line2">
+          Idee: Läden & Preise sammeln, damit du schneller findest, worauf du Bock hast. Kein großes Projekt – einfach Hobby.
+        </p>
+        <p data-i18n="about.line3">
+          Wenn dir was auffällt – Fehler, neue Läden, Wünsche – sag gern Bescheid.
+        </p>
+        <a href="feedback.html" class="btn" data-i18n="about.cta">Feedback geben</a>
+        <div class="foot">© <span id="yr"></span> Dönerd · <span data-i18n="about.foot">Community-Projekt</span></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ===== Supabase ===== -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- ===== i18n ===== -->
+  <script>
+    const DICTS = {
+      de: {
+        nav:{ map:"Karte", selection:"Preisliste", add:"Shop hinzufügen", feedback:"Feedback", about:"Über den Gründer",
+              search_ph:"Suche nach Name, Straße, Tags … (z.B. falafel, scharf)" },
+        ui:{ dark:"Dunkel", light:"Hell", menu:"Menü", language:"Sprache" },
+        about:{
+          hey:"Hey 👋",
+          line1:"Ich bin einfach nur ein Typ, der Döner liebt – und deshalb diese kleine Website gebaut hat.",
+          line2:"Idee: Läden & Preise sammeln, damit du schneller findest, worauf du Bock hast. Kein großes Projekt – einfach Hobby.",
+          line3:"Wenn dir was auffällt – Fehler, neue Läden, Wünsche – sag gern Bescheid.",
+          cta:"Feedback geben",
+          foot:"Community-Projekt"
+        },
+        auth:{
+          login:"Login", profile:"Profil",
+          title_login:"Anmelden", title_signup:"Konto erstellen",
+          email_ph:"E-Mail", pass_ph:"Passwort", pass_repeat_ph:"Passwort wiederholen",
+          or:"oder",
+          btn_signin:"Einloggen", btn_signup:"Konto erstellen",
+          btn_github:"Mit GitHub fortfahren",
+          err_fill:"Alle Felder ausfüllen.",
+          err_need_email_pass:"Bitte E-Mail und Passwort eingeben.",
+          err_pass_mismatch:"Passwörter stimmen nicht überein.",
+          ok_signed_in:"✅ Eingeloggt",
+          ok_signup_mail:"📨 Bitte bestätige deine E-Mail. Danach kannst du dich einloggen.",
+          first_ph:"Vorname", last_ph:"Nachname", age_ph:"Alter"
+        }
+      },
+      en: {
+        nav:{ map:"Map", selection:"Price list", add:"Add Shop", feedback:"Feedback", about:"About the Founder",
+              search_ph:"Search name, street, tags … (e.g. falafel, spicy)" },
+        ui:{ dark:"Dark", light:"Light", menu:"Menu", language:"Language" },
+        about:{
+          hey:"Hey 👋",
+          line1:"I’m just a random guy who loves kebab — so I built this small website.",
+          line2:"Idea: collect shops & prices so you can find what you crave faster. Not a big project — just a hobby.",
+          line3:"If you spot anything — errors, new shops, wishes — let me know.",
+          cta:"Leave feedback",
+          foot:"community project"
+        },
+        auth:{
+          login:"Login", profile:"Profile",
+          title_login:"Sign in", title_signup:"Create account",
+          email_ph:"Email", pass_ph:"Password", pass_repeat_ph:"Repeat password",
+          or:"or",
+          btn_signin:"Sign in", btn_signup:"Create account",
+          btn_github:"Continue with GitHub",
+          err_fill:"Please fill in all fields.",
+          err_need_email_pass:"Please enter email and password.",
+          err_pass_mismatch:"Passwords do not match.",
+          ok_signed_in:"✅ Signed in",
+          ok_signup_mail:"📨 Please confirm your email, then you can sign in.",
+          first_ph:"First name", last_ph:"Last name", age_ph:"Age"
+        }
+      }
+    };
+
+    const I18N = (() => {
+      let lang = 'de';
+      const get=(o,p)=>p.split('.').reduce((a,k)=> (a && a[k]!=null) ? a[k] : undefined, o);
+      const t=(k,fb)=>{ const v=get(DICTS[lang],k); return v==null ? (fb ?? k) : v; };
+
+      function apply(){
+        // Text nodes
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          el.textContent = t(el.dataset.i18n, el.textContent.trim());
+        });
+        // Attribute translations
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+          el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder, el.getAttribute('placeholder')||''));
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+          el.setAttribute('title', t(el.dataset.i18nTitle, el.getAttribute('title')||''));
+        });
+        document.documentElement.lang = lang;
+
+        // Toggle DE/EN active
+        document.querySelectorAll('.lang-toggle [data-lang]').forEach(b=>{
+          const on=b.dataset.lang===lang;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+
+        // Theme labels
+        const theme = document.documentElement.getAttribute('data-theme') || 'light';
+        const themeText = document.getElementById('themeText');
+        const mobileThemeText = document.getElementById('mobileThemeText');
+        if(themeText) themeText.textContent = (theme==='dark') ? t('ui.light') : t('ui.dark');
+        if(mobileThemeText) mobileThemeText.textContent = (theme==='dark') ? t('ui.light') : t('ui.dark');
+      }
+
+      function set(l){
+        lang = (l==='en') ? 'en' : 'de';
+        localStorage.setItem('lang', lang);
+        apply();
+        // Update dynamic login text to localized label if not personalized
+        const loginText = document.getElementById('loginText');
+        const mobileLoginText = document.getElementById('mobileLoginText');
+        if(loginText && !loginText.textContent.startsWith('Hi,')){
+          loginText.textContent = t('auth.login');
+        }
+        if(mobileLoginText && !mobileLoginText.textContent.startsWith('Hi,')){
+          mobileLoginText.textContent = t('auth.login');
+        }
+      }
+
+      function init(){
+        const guess=(navigator.language||'').slice(0,2);
+        set(localStorage.getItem('lang') || (['de','en'].includes(guess)?guess:'de'));
+        document.addEventListener('click', e=>{
+          const btn = e.target.closest('.lang-toggle [data-lang]');
+          if(btn) set(btn.dataset.lang);
+        });
+      }
+      return { init, t };
+    })();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('yr').textContent = new Date().getFullYear();
+      I18N.init();
+    });
+  </script>
+
+  <!-- ===== Auth glue (Supabase) ===== -->
+  <script>
+    const SUPABASE_URL  = 'https://bcxeaxhhhvagpvomtsyi.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGVheGhoaHZhZ3B2b210c3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTUxMzcsImV4cCI6MjA3MDgzMTEzN30.HCnWgapZrDY4RIgdXM5eh2UkslFpSSuJwEUszZHtp0w';
+    const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    let currentUser = null;
+
+    function showToast(msg, ms=4200){
+      const t = document.getElementById('donerdToast');
+      if(!t) return alert(msg);
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(()=> t.classList.remove('show'), ms);
+    }
+
+    async function setUser(user){
+      currentUser = user;
+      const loginBtn = document.getElementById('loginBtn');
+      const loginText= document.getElementById('loginText');
+      const mobileLoginText= document.getElementById('mobileLoginText');
+
+      if (user) {
+        loginBtn.title = I18N.t('auth.profile');
+        const first = user.user_metadata?.first_name;
+        const label = first ? `Hi, ${first}` : I18N.t('auth.profile');
+        if(loginText) loginText.textContent = label;
+        if(mobileLoginText) mobileLoginText.textContent = label;
+      } else {
+        loginBtn.title = I18N.t('auth.login');
+        if(loginText) loginText.textContent = I18N.t('auth.login');
+        if(mobileLoginText) mobileLoginText.textContent = I18N.t('auth.login');
+      }
+    }
+
+    async function handleSession(session){
+      const user = session?.user ?? null;
+      if (user) {
+        try {
+          const display =
+            user.user_metadata?.user_name ||
+            user.user_metadata?.full_name ||
+            (user.email ? user.email.split('@')[0] : 'User');
+          await supa.from('profiles').upsert(
+            { id: user.id, display_name: display },
+            { onConflict: 'id' }
+          );
+        } catch(e){}
+      }
+      await setUser(user);
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // session bootstrap + listener
+      const { data:{ session } } = await supa.auth.getSession();
+      await handleSession(session);
+      supa.auth.onAuthStateChange(async (_event, session)=>{ await handleSession(session); });
+
+      // Desktop Login/Profile click
+      document.getElementById('loginBtn')?.addEventListener('click', async () => {
+        const { data } = await supa.auth.getUser();
+        if (data?.user) { window.location.href = 'profile.html'; return; }
+        openAuth();
+      });
+
+      // Mobile login button
+      document.getElementById('mobileLogin')?.addEventListener('click', async () => {
+        const { data } = await supa.auth.getUser();
+        if (data?.user) { window.location.href = 'profile.html'; return; }
+        closeMenu(); openAuth();
+      });
+    });
+  </script>
+
+  <!-- ===== Dark mode + navbar glue + mobile dropdown + active mark ===== -->
+  <script>
+    (function(){
+      const themeBtn  = document.getElementById('themeBtn');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeText = document.getElementById('themeText');
+
+      const menuBtn   = document.getElementById('menuBtn');
+      const mobileMenu= document.getElementById('mobileMenu');
+      const mobileThemeBtn = document.getElementById('mobileTheme');
+      const mobileThemeText= document.getElementById('mobileThemeText');
+
+      function setTheme(mode){
+        document.documentElement.setAttribute('data-theme', mode);
+        localStorage.setItem('theme', mode);
+        if(themeIcon) themeIcon.textContent = mode === 'dark' ? '🌞' : '🌙';
+        if(themeText) themeText.textContent = (mode === 'dark') ? I18N.t('ui.light') : I18N.t('ui.dark');
+        if(mobileThemeText) mobileThemeText.textContent = (mode === 'dark') ? I18N.t('ui.light') : I18N.t('ui.dark');
+      }
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(stored || (prefersDark ? 'dark' : 'light'));
+
+      themeBtn?.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+      mobileThemeBtn?.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+
+      function closeMenu(){ mobileMenu?.classList.remove('open'); menuBtn?.setAttribute('aria-expanded','false'); }
+
+      // Highlight current page in the mobile menu
+      function markActiveMobile(){
+        const here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+        document.querySelectorAll('#mobileMenu .menu-item[href]').forEach(a=>{
+          const target = (a.getAttribute('href') || '').toLowerCase();
+          const match  = target === here || target === ('./' + here);
+          a.classList.toggle('is-active', match);
+          if (match) a.setAttribute('aria-current','page');
+          else a.removeAttribute('aria-current');
+        });
+      }
+
+      function toggleMenu(){
+        const open = !mobileMenu.classList.contains('open');
+        if(open){
+          mobileMenu.classList.add('open');
+          menuBtn.setAttribute('aria-expanded','true');
+          markActiveMobile(); // ensure highlight when opening
+        } else {
+          closeMenu();
+        }
+      }
+
+      // Call once on load, too
+      markActiveMobile();
+
+      menuBtn?.addEventListener('click', (e)=> { e.stopPropagation(); toggleMenu(); });
+      document.addEventListener('click', (e)=>{ if(!mobileMenu?.classList.contains('open')) return; const inside = e.target.closest('#mobileMenu') || e.target.closest('#menuBtn'); if(!inside) closeMenu(); });
+      window.addEventListener('keydown', (e)=> { if(e.key === 'Escape') closeMenu(); });
+
+      // Navbar search here is decorative (no list to filter)
+      const navInput = document.getElementById('navSearchInput');
+      navInput?.addEventListener('input', ()=>{ /* no-op on about page */ });
+
+      // expose for auth glue
+      window.closeMenu = closeMenu;
+    })();
+  </script>
+
+  <!-- ===== Auth Modals ===== -->
+  <div id="authOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+    <div id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle"
+        style="width:min(420px,92vw);background:var(--card);color:var(--text);border:1px solid var(--ring);
+              border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div id="authTitle" style="font-weight:900;font-size:18px" data-i18n="auth.title_login">Anmelden</div>
+        <button id="authClose" class="rate-btn" style="background:#e5e7eb;color:#111;border-radius:999px;padding:6px 10px;font-weight:800">✖</button>
+      </div>
+
+      <div style="display:grid;gap:10px">
+        <input id="authEmail" type="email" data-i18n-placeholder="auth.email_ph" placeholder="E-Mail" autocomplete="email"
+              style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+
+        <div style="position:relative">
+          <input id="authPassword" type="password" data-i18n-placeholder="auth.pass_ph" placeholder="Passwort"
+                 style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+          <button id="toggleLoginPassword" type="button"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+        </div>
+
+        <div id="authError" style="min-height:18px;color:#ef4444;font-weight:700;font-size:12px"></div>
+
+        <div style="display:flex;gap:8px">
+          <button id="authSignIn" class="rate-btn" style="flex:1;background:var(--accent);color:#000;border:0;border-radius:999px;padding:8px 14px;font-weight:800" data-i18n="auth.btn_signin">Einloggen</button>
+          <button id="authSignUp" class="rate-btn" style="flex:1;background:#e5e7eb;color:#111;border:0;border-radius:999px;padding:8px 14px;font-weight:800" data-i18n="auth.btn_signup">Konto erstellen</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+          <div style="height:1px;background:var(--ring);flex:1"></div>
+          <small style="opacity:.8;font-weight:800" data-i18n="auth.or">oder</small>
+          <div style="height:1px;background:var(--ring);flex:1"></div>
+        </div>
+
+        <button id="authGitHub" class="rate-btn" style="width:100%;background:#111;color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:800" data-i18n="auth.btn_github">
+          Mit GitHub fortfahren
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="signupOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:1300">
+    <div id="signupModal" role="dialog" aria-modal="true" aria-labelledby="signupTitle"
+        style="width:min(420px,92vw);background:var(--card);color:var(--text);border:1px solid var(--ring);
+              border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div id="signupTitle" style="font-weight:900;font-size:18px" data-i18n="auth.title_signup">Konto erstellen</div>
+        <button id="signupClose" class="rate-btn" style="background:#e5e7eb;color:#111;border-radius:999px;padding:6px 10px;font-weight:800">✖</button>
+      </div>
+
+      <div style="display:grid;gap:10px">
+        <input id="signupName"     type="text"     placeholder="Vorname"    data-i18n-placeholder="auth.first_ph"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+        <input id="signupSurname"  type="text"     placeholder="Nachname"   data-i18n-placeholder="auth.last_ph"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+        <input id="signupAge"      type="number"   placeholder="Alter"      data-i18n-placeholder="auth.age_ph"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+        <input id="signupEmail"    type="email"    placeholder="E-Mail"     data-i18n-placeholder="auth.email_ph"
+               style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+
+        <div style="position:relative">
+          <input id="signupPassword"  type="password" placeholder="Passwort" data-i18n-placeholder="auth.pass_ph"
+                 style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+          <button id="toggleSignupPassword" type="button"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+        </div>
+
+        <div style="position:relative">
+          <input id="signupPassword2" type="password" placeholder="Passwort wiederholen" data-i18n-placeholder="auth.pass_repeat_ph"
+                 style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--ring);background:transparent;color:var(--text);font:inherit" />
+          <button id="toggleSignupPassword2" type="button"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none">👁</button>
+        </div>
+
+        <div id="authErrorSignup" style="min-height:18px;color:#ef4444;font-weight:700;font-size:12px"></div>
+        <button id="signupSubmit" class="rate-btn" style="width:100%;background:var(--accent);color:#000;border:0;border-radius:999px;padding:8px 14px;font-weight:800" data-i18n="auth.btn_signup">Konto erstellen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth actions -->
+  <script>
+    function openAuth(){
+      const ov = document.getElementById('authOverlay');
+      document.getElementById('authTitle').textContent = I18N.t('auth.title_login');
+      document.getElementById('authError').textContent = '';
+      document.getElementById('authEmail').value = '';
+      document.getElementById('authPassword').value = '';
+      ov.style.display = 'flex';
+    }
+    function closeAuth(){ document.getElementById('authOverlay').style.display = 'none'; }
+    function openSignup(){
+      closeAuth();
+      document.getElementById('signupTitle').textContent = I18N.t('auth.title_signup');
+      document.getElementById('authErrorSignup').textContent = '';
+      document.getElementById('signupOverlay').style.display = 'flex';
+    }
+    function closeSignup(){ document.getElementById('signupOverlay').style.display = 'none'; }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Close handlers
+      document.getElementById('authClose')?.addEventListener('click', closeAuth);
+      document.getElementById('signupClose')?.addEventListener('click', closeSignup);
+      document.getElementById('authOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='authOverlay') closeAuth(); });
+      document.getElementById('signupOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='signupOverlay') closeSignup(); });
+
+      // Toggle password visibility
+      function togglePassword(inputId, btnId){
+        const input = document.getElementById(inputId);
+        const btn   = document.getElementById(btnId);
+        if (input && btn){
+          btn.type = 'button';
+          btn.addEventListener('click', (e)=>{ e.preventDefault(); input.type = input.type === 'password' ? 'text' : 'password'; });
+        }
+      }
+      togglePassword('authPassword','toggleLoginPassword');
+      togglePassword('signupPassword','toggleSignupPassword');
+      togglePassword('signupPassword2','toggleSignupPassword2');
+
+      // Auth actions
+      document.getElementById('authSignUp')?.addEventListener('click', openSignup);
+
+      document.getElementById('authGitHub')?.addEventListener('click', async ()=> {
+        const redirectTo = location.origin;
+        await supa.auth.signInWithOAuth({ provider:'github', options:{ redirectTo, scopes:'read:user user:email' }});
+      });
+
+      document.getElementById('authSignIn')?.addEventListener('click', async () => {
+        const email = (document.getElementById('authEmail').value||'').trim();
+        const password = document.getElementById('authPassword').value||'';
+        const err = document.getElementById('authError');
+        err.textContent = '';
+        if (!email || !password) { err.textContent = I18N.t('auth.err_need_email_pass'); return; }
+        const { error } = await supa.auth.signInWithPassword({ email, password });
+        if (error) { err.textContent = error.message; return; }
+        const { data:{ session } } = await supa.auth.getSession();
+        await handleSession(session);
+        closeAuth(); try{ showToast(I18N.t('auth.ok_signed_in')); }catch(_){}
+      });
+
+      document.getElementById('signupSubmit')?.addEventListener('click', async () => {
+        const email     = (document.getElementById('signupEmail').value||'').trim();
+        const password  = document.getElementById('signupPassword').value||'';
+        const password2 = document.getElementById('signupPassword2').value||'';
+        const first     = document.getElementById('signupName').value||'';
+        const last      = document.getElementById('signupSurname').value||'';
+        const age       = parseInt(document.getElementById('signupAge').value,10)||null;
+        const err       = document.getElementById('authErrorSignup');
+
+        err.style.color = '#ef4444'; err.textContent = '';
+        if(!email || !password || !password2 || !first || !last || !age){ err.textContent = I18N.t('auth.err_fill'); return; }
+        if(password !== password2){ err.textContent = I18N.t('auth.err_pass_mismatch'); return; }
+
+        const { error } = await supa.auth.signUp({ email, password, options:{ data:{ first_name:first, last_name:last, age } }});
+        if(error){ err.textContent = error.message; return; }
+        err.style.color = '#16a34a'; err.textContent = I18N.t('auth.ok_signup_mail');
+        closeSignup(); try{ showToast(I18N.t('auth.ok_signup_mail')); }catch(_){}
+      });
+    });
+  </script>
+
+  <!-- Toast element -->
+  <div id="donerdToast" role="status" aria-live="polite"
+       style="position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#111;color:#fff;border-radius:999px;padding:10px 14px;box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:1400;display:none;font-weight:800">
+  </div>
+  <script>
+    (function(){
+      const el=document.getElementById('donerdToast');
+      if(!el) return;
+      const style=document.createElement('style');
+      style.textContent=`#donerdToast.show{display:block;animation:toastfade .25s ease both}
+        @keyframes toastfade{from{opacity:0;transform:translate(-50%,8px)} to{opacity:1;transform:translate(-50%,0)}}`;
+      document.head.appendChild(style);
+    })();
+  </script>
+</body>
+</html>

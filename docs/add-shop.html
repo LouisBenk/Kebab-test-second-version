@@ -1,0 +1,2276 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dönerd – Shop hinzufügen</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    
+    :root{
+  --bg:#f0f2f5; --text:#0f172a; --muted:#64748b; --card:#ffffff;
+  --ring:#e5e7eb; --chip:#eef2f7; --chipText:#0f172a;
+  --accent:#fb923c; --accent-strong:#f97316;
+  --shadow:0 10px 28px rgba(0,0,0,.16);
+  --nav-pill-w:140px;
+  --topbar-h: 64px; --gap-top: 16px;
+  --bottomnav-h: 64px;                    /* mobile bottom nav height */
+  --bnb-active:#fb923c;                   /* Airbnb-ish pink for active */
+}
+
+
+    @media (max-width:600px){ :root{ --topbar-h:56px; --gap-top:8px; --bottomnav-h:56px; } }
+
+
+    html[data-theme="dark"]{
+      --bg:#0b0f14; --text:#e5e7eb; --muted:#9aa4b2; --card:#0f172a;
+      --ring:#1f2937; --chip:#0b1220; --chipText:#e5e7eb;
+      --shadow:0 16px 40px rgba(0,0,0,.5);
+    }
+
+    html, body {
+  margin:0; height:100%;
+  background:var(--bg); color:var(--text);
+  font-family: Arial, sans-serif; line-height:1.5; letter-spacing:.1px;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility; -webkit-text-size-adjust:100%;
+}
+
+    button, a, input, select, textarea { font:inherit; }
+:focus:not(:focus-visible){ outline:none; }
+:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px; border-radius:10px;
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+}
+
+
+    /* ===== Topbar ===== */
+    #navbar{
+      position:fixed; top:0; left:0; right:0;
+      height:var(--topbar-h);
+      display:flex; align-items:center; justify-content:center;
+      padding:0 8px; z-index:1000; background:transparent;
+      backdrop-filter: blur(10px);
+    }
+    @media (max-width:600px){
+      #navbar{ background:rgba(15,23,42,.88); border-bottom:1px solid var(--ring); }
+      html[data-theme="light"] #navbar{ background:rgba(255,255,255,.88); }
+    }
+    .nav-inner{width:100%; max-width:1200px; display:flex; align-items:center; justify-content:flex-start; gap:12px}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:900; font-size:28px; padding-left:6px; flex:0 0 auto}
+    .brand .dot{width:12px; height:12px; border-radius:50%; background:#ff385c; display:inline-block}
+
+    .searchbar{flex:0 1 620px; display:flex; align-items:center; background:var(--card); border-radius:999px; box-shadow:var(--shadow); padding:6px; min-width:240px; max-width:620px; border:1px solid var(--ring); margin-left:12px}
+    .search-seg{
+  flex:1; display:flex; align-items:center; gap:10px;
+  padding:10px 14px; border-radius:999px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; transition:all .18s ease;
+}
+
+    .search-seg:hover{ background:rgba(0,0,0,.04); box-shadow:0 2px 10px rgba(0,0,0,.06); transform:translateY(-1px); }
+
+   html[data-theme="dark"] .search-seg:hover{ background:rgba(255,255,255,.05); box-shadow:0 2px 12px rgba(0,0,0,.5); transform:translateY(-1px); }
+
+    .seg-icon{width:20px; height:20px; display:inline-grid; place-items:center; border-radius:6px; background:#f3f4f6; font-size:14px}
+    html[data-theme="dark"] .seg-icon{background:#111827; color:#e5e7eb}
+    .seg-input{flex:1; display:flex; align-items:center; gap:8px; min-width:0}
+    .seg-input input{width:100%; border:0; outline:0; background:transparent; color:var(--text); font:inherit}
+
+    .right-actions{display:flex; align-items:center; gap:10px; margin-left:auto}
+    .action-pill{
+  display:flex; align-items:center; gap:8px; padding:10px 16px;
+  background:var(--card); border:1px solid var(--ring); border-radius:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08); font-weight:700; white-space:nowrap;
+  cursor:pointer; color:var(--text); transition:all .18s ease;
+}
+.action-pill:hover{ transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.12); }
+.action-pill:active{ transform:translateY(0); box-shadow:0 2px 6px rgba(0,0,0,.1); }
+
+    .action-pill:hover{background:rgba(0,0,0,.04)}
+    html[data-theme="dark"] .action-pill:hover{background:rgba(255,255,255,.05)}
+    .action-icon{width:18px; height:18px; display:inline-grid; place-items:center; border-radius:50%; background:#f3f4f6; font-size:12px; color:#374151}
+    html[data-theme="dark"] .action-icon{background:#111827; color:#e5e7eb}
+
+    .action-pill.is-active{ background:var(--accent); color:#000; border-color:transparent; box-shadow:0 6px 16px rgba(249,115,22,.35); }
+
+    .lang-toggle{display:inline-flex; background:var(--card); border:1px solid var(--ring); border-radius:999px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .lang-toggle button{min-width:60px; padding:8px 12px; font-weight:800; border:0; background:transparent; cursor:pointer; line-height:1; color:var(--text)}
+    .lang-toggle button+button{border-left:1px solid var(--ring)}
+    .lang-toggle button.is-active{background:var(--accent); color:#000}
+
+    /* ===== Mobile-only: dropdown menu (same pattern as the other pages) ===== */
+    #menuBtn{ display:none; }
+    #mobileMenu{
+  display:none !important;              /* fully disabled */
+  position:absolute; top:calc(var(--topbar-h) + 6px); right:8px;
+  width:min(86vw, 320px);
+  background:var(--card); color:var(--text);
+  border:1px solid var(--ring); border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,.36);
+  z-index:1200; padding:8px;
+}
+
+    #mobileMenu.open{ display:block; }
+    #mobileMenu .menu-group{ display:grid; gap:6px; padding:8px; border-bottom:1px solid var(--ring); }
+    #mobileMenu .menu-group:last-child{ border-bottom:0; }
+    #mobileMenu .menu-item{
+      display:flex; align-items:center; gap:8px;
+      padding:10px 12px; border-radius:10px; border:1px solid var(--ring);
+      background:var(--card); cursor:pointer; text-decoration:none; color:inherit; font-weight:800;
+    }
+    #mobileMenu .menu-item:hover{ background:rgba(0,0,0,.04); }
+    html[data-theme="dark"] #mobileMenu .menu-item:hover{ background:rgba(255,255,255,.06); }
+    #mobileMenu .menu-item.is-active{
+      background:var(--accent);
+      color:#000;
+      border-color:transparent;
+      box-shadow:0 6px 16px rgba(249,115,22,.35);
+    }
+
+   @media (max-width:600px){
+  .brand{ font-size:20px; padding-left:2px; }
+  .searchbar{ min-width:0; max-width:100%; padding:4px; border-radius:12px; }
+  .search-seg{ padding:8px 10px; }
+  .seg-icon{ width:18px; height:18px; font-size:12px; }
+  .right-actions{ display:none; }
+  #menuBtn{
+  display:none !important;   /* remove Menu button on phone */
+}
+
+  /* lift page so bottom bar never overlaps content */
+  .actions{ margin-bottom: calc(var(--bottomnav-h) + 14px); }
+}
+
+
+
+ /* ===== Page canvas ===== */
+/* White underlay to the very bottom on web/mobile so corners look 100% white */
+body::after{
+  content:"";
+  position:fixed; left:0; right:0; bottom:0;
+  height: calc(env(safe-area-inset-bottom) + 48px);   /* extend to fully fill under bar */
+  background: var(--card);                            /* EXACT same token as bar */
+  pointer-events:none; z-index:999;                   /* sits under #bottomNav (1100) */
+}
+
+
+
+
+/* ===== Mobile Bottom Nav (Airbnb-style) ===== */
+#bottomNav{
+  position: fixed; left:0; right:0;
+  bottom: calc(env(safe-area-inset-bottom) + 16px);   /* raised */
+  height: var(--bottomnav-h);
+  width:100%;
+  background: var(--card); color: var(--text);        /* EXACT same white as overlay */
+  border-top-left-radius:16px; border-top-right-radius:16px;
+  box-shadow:0 10px 26px rgba(0,0,0,.12);
+  display:none; z-index:1100;
+}
+
+
+
+
+
+
+#bottomNav .bn-inner{
+  height:100%;
+  display:flex; align-items:center; justify-content:space-around;
+  padding: 6px 12px 6px; /* uniform padding, safe-area handled by bottom offset */
+}
+
+
+#bottomNav .bn-item{
+  flex:1; min-width:0; height:100%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  font-weight:800; text-decoration:none; color:inherit;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent; border: 0; padding: 0; appearance: none; box-shadow: none; /* remove grey circle */
+  transition: transform .12s ease, color .12s ease;
+}
+
+#bottomNav .bn-item:active{
+  transform: translateY(1px) scale(.98);
+  background: transparent; /* ensure no pressed grey circle on iOS */
+}
+
+#bottomNav .bn-item:hover{ opacity:.85; }
+
+
+#bottomNav .bn-icon{
+  font-size:19px; line-height:1; background:none;
+  font-weight:900;                                   /* unified weight */
+  font-family: ui-sans-serif, system-ui, -apple-system, Arial, sans-serif; /* avoid emoji fonts */
+  color: currentColor;                               /* inherit text color (monochrome) */
+}
+
+
+#bottomNav .bn-label{ font-size:10.5px; line-height:1; opacity:.95; letter-spacing:.15px; }
+#bottomNav .is-active .bn-label{ color:inherit; font-weight:900; }  /* no accent color */
+#bottomNav .is-active .bn-icon{ filter:none; }                      /* keep icons color-free */
+
+
+/* no FAB anymore: the center item is same size as others */
+#bottomNav .bn-add .bn-label{ font-size:10.5px; }
+
+/* Language text (DE/EN) tidy */
+#bottomNav .bn-lang .bn-badge{ font-size:10.5px; font-weight:900; letter-spacing:.25px; }
+
+/* show only on phones */
+@media (max-width:600px){ #bottomNav{ display:block; } }
+
+    .sug-box{
+  position:absolute; left:0; right:0; top:100%; margin-top:6px;
+  background:var(--card); border:1px solid var(--ring); border-radius:10px;
+  box-shadow:0 12px 28px rgba(0,0,0,.16); z-index:1200; max-height:240px; overflow:auto;
+}
+.sug-item{
+  padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--ring);
+}
+.sug-item:last-child{ border-bottom:0; }
+.sug-item[aria-selected="true"], .sug-item:hover{
+  background:rgba(249,115,22,.12);
+}
+
+    .coord-input{
+  border:0; outline:0; background:transparent; color:var(--text);
+}
+.coord-input::placeholder{ color:var(--muted); }
+
+    .page{
+  padding-top: calc(var(--topbar-h) + var(--gap-top));
+  padding-bottom: 16px;
+}
+@media (max-width:600px){
+  .page{ padding-bottom: calc(env(safe-area-inset-bottom) + var(--bottomnav-h) + 24px); } /* leave space for raised dock */
+}
+
+
+    .wrap{display:flex;justify-content:center;padding:16px}
+    .card{width:min(980px,96vw);background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:22px 22px 26px; border:1px solid var(--ring)}
+
+    .title{font-size:28px;font-weight:900;margin:0 0 6px}
+    .subtitle{color:var(--muted);margin:0 0 14px}
+/* Step badges: grey by default, orange when done */
+.step-badge{
+  display:inline-flex; align-items:center; gap:6px;
+  margin-left:10px; padding:4px 8px;
+  border-radius:999px;
+  background:var(--chip); border:1px solid var(--ring);
+  font-weight:800; font-size:12px;
+  opacity:.6; transition:background .15s, border-color .15s, opacity .15s;
+}
+.step-badge.done{
+  background:rgba(249,115,22,.16); border-color:rgba(249,115,22,.35);
+  opacity:1;
+}
+
+.progress{
+  height:8px;border-radius:999px;background:var(--ring);
+  overflow:hidden;box-shadow:inset 0 0 0 1px #0001;
+  position:sticky; top:calc(var(--topbar-h) + 8px); z-index:900;
+}
+
+
+.progress__bar{
+  height:100%; width:0%;
+  background:linear-gradient(90deg,#fdbb74,#fb923c,#f97316);
+  transition:width .25s ease; will-change:width;
+}
+
+.hours-row .times{gap:6px;align-items:center}
+.hours-row.has-times .times{display:flex}
+.time-toggle{border:1px solid var(--ring);background:var(--card);border-radius:999px;padding:6px 10px;font-weight:800;cursor:pointer}
+
+.hours-row.has-times .times{display:flex}
+.time-toggle{border:1px solid var(--ring);background:var(--card);border-radius:999px;padding:6px 10px;font-weight:800;cursor:pointer}
+
+    hr.sep{border:none;border-top:1px solid var(--ring);margin:14px 0 18px}
+
+    .section{margin-top:18px}
+    .section h4{margin:0 0 10px;font-size:16px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:820px){ .grid{grid-template-columns:1fr} }
+
+    .field{display:flex;flex-direction:column;gap:6px}
+    .label-row{display:flex;align-items:center;gap:8px;font-weight:800}
+    .label-icon{width:22px;height:22px;display:grid;place-items:center;border-radius:8px;background:#f3f4f6}
+    html[data-theme="dark"] .label-icon{background:#111827}
+ .input,.donerd-input,.field input[type="text"], .field input[type="number"], .field input[type="time"], .field textarea{
+  border:1px solid var(--ring); border-radius:12px;
+  padding:12px 14px; font-size:14px; outline:0; background:transparent; color:var(--text);
+  transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.input::placeholder,.field input::placeholder,.field textarea::placeholder{ color:var(--muted); opacity:.8; }
+.field input:hover, .field textarea:hover{ border-color:rgba(249,115,22,.35); }
+
+
+/* ensure all <input type="time"> use same font everywhere */
+input[type="time"]{ font-family:inherit; }
+
+    .field textarea{min-height:84px;resize:vertical}
+    .field input:focus, .field textarea:focus{
+  box-shadow:0 0 0 3px rgba(249,115,22,.22), inset 0 1px 0 rgba(255,255,255,.04);
+  border-color:rgba(249,115,22,.45);
+}
+
+    .chip-row{display:flex;flex-wrap:wrap;gap:10px}
+    /* Horizontal scroller for category chips */
+.chip-row.scroller{
+  overflow-x:auto; overflow-y:hidden;
+  white-space:nowrap; gap:10px;
+  padding:4px 2px;                 /* compact look */
+  -webkit-overflow-scrolling:touch;
+  scroll-snap-type:x proximity;    /* nice snap feel */
+  mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+}
+.chip-row.scroller::-webkit-scrollbar{ height:8px }
+.chip-row.scroller::-webkit-scrollbar-thumb{
+  background:#0002; border-radius:999px;
+}
+html[data-theme="dark"] .chip-row.scroller::-webkit-scrollbar-thumb{ background:#fff2 }
+
+/* Make chips a tiny bit tighter inside a scroller */
+.chip-row.scroller .chip{ scroll-snap-align:start; padding:8px 12px; }
+
+    .chip{
+  display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:999px;
+  background:var(--chip); color:var(--chipText); border:1px solid var(--ring);
+  cursor:pointer; user-select:none; box-shadow:0 2px 8px rgba(0,0,0,.04);
+  transition:transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+}
+.chip:hover{ transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.08); }
+.chip:active{ transform:translateY(0); box-shadow:0 2px 6px rgba(0,0,0,.06); }
+.chip:focus-within{ box-shadow:0 0 0 3px rgba(249,115,22,.22); border-color:rgba(249,115,22,.35); }
+
+    .chip input{display:none}
+    .chip.active{
+  background:rgba(249,115,22,.16);
+  border-color:rgba(249,115,22,.35);
+  box-shadow:0 3px 10px rgba(249,115,22,.18);
+}
+
+    .pill{display:inline-flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--ring);border-radius:999px;padding:8px 12px}
+    html[data-theme="dark"] .pill{background:#0b1220}
+    .pill strong{font-size:12px}
+    .coords{display:flex;gap:10px;flex-wrap:wrap}
+
+    #map{height:320px;border-radius:14px;border:1px solid var(--ring);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+
+    /* Inline day chips + single editor row below */
+/* (deleted: inline day chips + separate editor row) */
+
+
+    .hours-row{display:flex; align-items:center; gap:12px; flex-wrap:nowrap; padding:6px 8px; border-radius:10px; transition:background .15s ease}
+.hours-row:hover{background:rgba(0,0,0,.03)}
+html[data-theme="dark"] .hours-row:hover{background:rgba(255,255,255,.04)}
+.hours-row .day-label{width:64px; flex:0 0 64px; font-weight:800; color:var(--muted)}
+/* allow wrapping only on very small screens */
+@media (max-width:560px){ .hours-row{ flex-wrap:wrap; } }
+
+
+    .hours-row .slot{display:flex; align-items:center; gap:6px}
+.hours-row input[type="time"]{padding:8px 10px; border-radius:10px}
+
+/* fun, clean opening-hours UI */
+.hours-row{border-radius:10px; padding:6px 8px; transition:background .15s ease}
+.hours-row:hover{background:rgba(0,0,0,.03)}
+html[data-theme="dark"] .hours-row:hover{background:rgba(255,255,255,.04)}
+
+/* toggle "Zeiten" */
+.hours-row .slot.times{ display:none; }
+.hours-row.has-times .slot.times{ display:flex; }
+
+.time-toggle{
+  border:1px solid var(--ring); background:var(--card); border-radius:999px;
+  padding:6px 12px; font-weight:900; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.06)
+}
+.time-toggle.is-on{ background:rgba(249,115,22,.16); border-color:rgba(249,115,22,.35) }
+
+/* pretty on/off switch for "offen" */
+.visually-hidden{ position:absolute !important; opacity:0 !important; width:1px; height:1px; overflow:hidden; }
+.switch{
+  --h:22px; --w:42px;
+  width:var(--w); height:var(--h); border-radius:999px; border:1px solid var(--ring);
+  background:var(--card); position:relative; display:inline-block; box-shadow:inset 0 0 0 1px #00000008;
+}
+.switch::after{
+  content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%;
+  background:#9ca3af; transition:left .15s ease, background .15s ease;
+}
+input.day-toggle:checked + .switch{ background:rgba(249,115,22,.18); border-color:rgba(249,115,22,.35); }
+input.day-toggle:checked + .switch::after{ left:calc(var(--w) - 20px); background:#f97316; }
+
+/* tiny toolbar */
+.hours-tools{
+  display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px;
+}
+.hours-tools .hbtn{
+  border:1px solid var(--ring); background:var(--card); border-radius:999px;
+  padding:6px 10px; font-weight:800; cursor:pointer;
+}
+.hours-tools .hbtn:hover{ background:rgba(0,0,0,.04) }
+html[data-theme="dark"] .hours-tools .hbtn:hover{ background:rgba(255,255,255,.06) }
+
+/* bulk apply (same hours for every day) */
+.hbulk{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:0 }
+
+.hbulk .t{ display:flex; align-items:center; gap:6px; border:1px solid var(--ring); background:var(--card); border-radius:12px; padding:6px 8px; box-shadow:0 1px 3px rgba(0,0,0,.06) }
+.hbulk .t input[type="time"]{ border:0; outline:0; background:transparent; color:var(--text); font:inherit; padding:4px 6px; border-radius:8px; width:96px; text-align:center }
+.hbulk .apply{
+  border:1px solid var(--ring);
+  background:linear-gradient(180deg,#fdbb74,#fb923c,#f97316);
+  color:#000; font-weight:900; border-radius:999px; padding:8px 12px;
+  box-shadow:0 3px 10px rgba(249,115,22,.18); /* softer */
+  cursor:pointer
+}
+
+
+/* weekly overview row */
+.hours-overview{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px }
+/* more compact chip */
+.hours-overview{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px }
+.hours-overview .ov{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border:1px solid var(--ring); border-radius:10px;
+  background:var(--card); box-shadow:0 1px 3px rgba(0,0,0,.04);
+  cursor:pointer; user-select:none; transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.hours-overview .ov:hover{ transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,0,0,.10); }
+
+.hours-overview .ov .d{
+  font-weight:800; color:var(--muted); text-transform:lowercase; letter-spacing:.2px;
+}
+
+/* softer “selected” like the category chips */
+.hours-overview .ov.on{
+  background:rgba(249,115,22,.16);
+  border-color:rgba(249,115,22,.35);
+  box-shadow:0 2px 8px rgba(249,115,22,.20);
+  color:inherit;
+}
+.hours-overview .ov.on .d{ color:inherit; }
+
+/* unselected looks neutral */
+.hours-overview .ov.off{ opacity:1; background:var(--card); }
+
+/* compact time area + same typeface as site */
+.hours-overview .ov .tt{ display:inline-flex; align-items:center; gap:6px; font-weight:800 }
+.hours-overview .ov input.ov-time{
+  font-size:12px; line-height:1.2;   /* smaller text */
+  border:1px solid var(--ring); background:var(--card);
+  border-radius:6px; padding:1px 4px; width:58px; height:22px;
+  text-align:center; color:var(--text);
+}
+
+
+.hours-overview .ov .dash{ opacity:.7 }
+
+/* slightly tighter on phones */
+@media (max-width:560px){
+  .hours-overview .ov{ padding:5px 8px; border-radius:9px }
+  .hours-overview .ov input.ov-time{ width:64px; height:26px; font-size:13px }
+}
+
+
+
+/* sticky progress follows scroll under navbar */
+.progress{
+  height:8px;border-radius:999px;background:var(--ring);
+  overflow:hidden;box-shadow:inset 0 0 0 1px #0001;
+  position:sticky; top:calc(var(--topbar-h) + 8px); z-index:900;
+}
+
+/* ensure time inputs are hidden by default (rule placed after .slot to win specificity) */
+.hours-row .slot.times{ display:none; }
+.hours-row.has-times .slot.times{ display:flex; }
+
+
+    .actions{display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:900;border:none;cursor:pointer;transition:transform .05s ease, box-shadow .15s ease}
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{
+      width:100%;max-width:440px;border-radius:999px;padding:14px 18px;
+      background:linear-gradient(180deg,#fdbb74 0%,#fb923c 50%,#f97316 100%);
+      color:#000;box-shadow:0 10px 22px rgba(249,115,22,.35)
+    }
+    .btn-secondary{border-radius:999px;padding:12px 16px;background:var(--card);border:1px solid var(--ring);color:var(--text);box-shadow:0 6px 14px rgba(0,0,0,.08)}
+    .i{width:18px;height:18px;display:grid;place-items:center;border-radius:999px;background:#fff1;border:1px solid #0001}
+
+    /* ===== Dropzone ===== */
+    .dropzone{
+  border:2px dashed var(--ring);
+  background:var(--card);
+  border-radius:14px;
+  padding:16px;
+  text-align:center;
+  cursor:pointer;
+  transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+    .dropzone:hover{ background:#f9fafb }
+    html[data-theme="dark"] .dropzone:hover{ background:#0b1220 }
+    .dropzone.dragover{
+  background:#fff7ed; border-color:#f97316;
+  box-shadow:0 8px 24px rgba(249,115,22,.18); transform:translateY(-1px);
+}
+
+    .dropzone input{ display:none }
+    .dz-preview{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px }
+    .dz-thumb{
+  width:96px; height:96px; border-radius:12px; overflow:hidden;
+  border:2px solid transparent; box-shadow:0 2px 8px rgba(0,0,0,.06);
+  background:#0001; position:relative; cursor:grab;   /* grab = reorder */
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.dz-thumb:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.12); }
+
+.dz-thumb:active{ cursor:grabbing; }
+.dz-thumb.is-hero{ border-color:#fb923c; }            /* first = hero (highlight) */
+
+.dz-thumb .dz-remove{
+  position:absolute; top:4px; right:4px;
+  background:rgba(0,0,0,.6); color:#fff;
+  border:0; border-radius:50%; width:20px; height:20px;
+  font-size:12px; line-height:1; cursor:pointer;
+  display:grid; place-items:center;
+}
+
+.dz-thumb .dz-remove:hover{ background:rgba(0,0,0,.8); }
+
+    .dz-thumb img{ width:100%; height:100%; object-fit:cover }
+    .dz-thumb small{
+      position:absolute; left:4px; bottom:4px; background:#000a; color:#fff;
+      border-radius:8px; padding:2px 6px; font-weight:800; font-size:11px;
+    }
+    .dz-thumb.is-hero{ border-color:#fb923c }
+
+    /* ===== Subcategory panels ===== */
+    .subcats{ margin-top:10px; display:grid; gap:8px }
+    .sub-panel{
+      display:none;
+      border:1px dashed var(--ring);
+      border-radius:12px;
+      padding:10px;
+      background:var(--card);
+    }
+    .sub-panel.open{ display:block; }
+    .sub-grid{ display:flex; flex-wrap:wrap; gap:8px }
+    .sub-chip{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:8px 12px; border-radius:999px; border:1px solid var(--ring);
+      background:var(--chip); color:var(--chipText); cursor:pointer; user-select:none;
+      font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.04);
+    }
+    .sub-chip input{ display:none; }
+    .sub-chip.active{ background:rgba(249,115,22,.16); border-color:rgba(249,115,22,.35); }
+  /* ===== Auth modals – polished UI ===== */
+.auth-row{ position:relative }                         /* anchor for eye button */
+.auth-row .auth-input{ padding-right:44px }            /* room for eye */
+.toggle-eye{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; display:grid; place-items:center;
+  border-radius:999px; border:1px solid var(--ring);
+  background:var(--card); color:var(--text); cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+.toggle-eye.active { background:var(--accent); color:#000; }
+
+.toggle-eye:hover{ filter:brightness(1.02) }
+.toggle-eye:active{ transform:translateY(-50%) scale(.98) }
+
+@keyframes modalIn{ from{ transform:translateY(6px) scale(.98); opacity:.0 } to{ transform:none; opacity:1 } }
+#authOverlay, #signupOverlay{
+  background:rgba(10,12,16,.55);
+  backdrop-filter:blur(6px);
+}
+.auth-card{
+  width:min(440px,92vw);
+  background:var(--card); color:var(--text);
+  border-radius:16px; padding:22px;
+  margin:16px;                     /* space from screen edges */
+  box-shadow:0 16px 40px rgba(0,0,0,.35);
+  border:1px solid color-mix(in oklab, var(--ring) 70%, transparent);
+  animation:modalIn .18s ease;
+  overflow:hidden;
+}
+
+
+.auth-head{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding-bottom:8px; border-bottom:1px dashed var(--ring);
+}
+.auth-title{ font-weight:900; font-size:20px; letter-spacing:.2px }
+.auth-close{
+  background:transparent; color:var(--text);
+  border:1px solid var(--ring); border-radius:999px; padding:6px 10px; font-weight:800;
+}
+.auth-grid{ display:grid; gap:10px; margin-top:10px }
+.auth-input{
+  width:100%; padding:12px 12px; border-radius:12px;
+  border:1px solid var(--ring); background:transparent; color:var(--text); font:inherit;
+  box-sizing:border-box;              /* prevent overflow in narrow popups */
+}
+
+.auth-row{ position:relative }
+.auth-row .toggle-eye{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  background:none; border:none; cursor:pointer
+}
+.auth-error{ min-height:18px; color:#ef4444; font-weight:800; font-size:12px }
+.auth-actions{ display:flex; gap:8px }
+.auth-btn{
+  border:0; border-radius:999px; padding:10px 16px; font-weight:900; cursor:pointer;
+  box-shadow:0 6px 16px rgba(0,0,0,.08)
+}
+.auth-primary{ background:var(--accent); color:#000 }
+.auth-secondary{ background:color-mix(in oklab, var(--ring) 30%, transparent); color:var(--text); border:1px solid var(--ring) }
+.auth-divider{
+  display:flex; align-items:center; gap:10px; margin:6px 0;
+}
+.auth-divider .line{ height:1px; background:var(--ring); flex:1 }
+.auth-google{ background:#ea4335; color:#fff; width:100% }
+</style>
+
+</head>
+<body>
+  <!-- ===== Topbar (with mobile menu + i18n labels) ===== -->
+  <div id="navbar">
+    <div class="nav-inner">
+      <div class="brand" aria-label="Dönerd">
+  <span class="dot"></span><span id="brandName">Dönerd</span>
+</div>
+
+
+      <div class="searchbar" role="group" aria-label="Primary actions">
+        <div class="search-seg" id="seg-looking">
+          <span class="seg-icon" aria-hidden="true">🏠</span>
+          <label class="seg-input" for="navSearchInput">
+            <input id="navSearchInput" type="text" data-i18n-placeholder="nav.search_ph"
+                   placeholder="Suche nach Name, Straße, Tags … (z.B. falafel, scharf)" aria-label="Kebab-Läden suchen" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Desktop actions -->
+      <div class="right-actions">
+        <button class="action-pill" id="mapBtn" onclick="location.href='index.html'">
+          <span class="action-icon">🗺️</span><span data-i18n="nav.map">Karte</span>
+        </button>
+        <button class="action-pill" onclick="location.href='selection.html'">
+          <span class="action-icon">📋</span><span data-i18n="nav.selection">Preisliste</span>
+        </button>
+        <button class="action-pill is-active" aria-current="page" onclick="location.href='add-shop.html'">
+          <span class="action-icon">➕</span><span data-i18n="nav.add">Shop hinzufügen</span>
+        </button>
+        
+      
+        <button class="action-pill" id="loginBtn">
+          <span class="action-icon">🔑</span><span id="loginText" data-i18n="auth.login">Login</span>
+        </button>
+
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+
+      <!-- Phone: dropdown trigger + menu -->
+<button id="menuBtn" hidden aria-haspopup="true" aria-expanded="false" data-i18n="ui.menu">Menü</button>
+
+<div id="mobileMenu" hidden role="menu" aria-label="Mobile Menu">
+
+        <div class="menu-group" aria-label="Navigation">
+          <a class="menu-item" href="index.html">🗺️ <span data-i18n="nav.map">Karte</span></a>
+          <a class="menu-item" href="selection.html">📋 <span data-i18n="nav.selection">Preisliste</span></a>
+          <a class="menu-item" href="add-shop.html">➕ <span data-i18n="nav.add">Shop hinzufügen</span></a>
+          <a class="menu-item" href="feedback.html">💬 <span data-i18n="nav.feedback">Feedback</span></a>
+          <a class="menu-item" href="about.html">👤 <span data-i18n="nav.about">Über den Gründer</span></a>
+        </div>
+        <div class="menu-group" aria-label="Account">
+          <button class="menu-item" id="mobileLogin">🔑 <span id="mobileLoginText" data-i18n="auth.login">Login</span></button>
+          <button class="menu-item" id="mobileTheme">🌓 <span id="mobileThemeText" data-i18n="ui.dark">Dunkel</span></button>
+        </div>
+        <div class="menu-group" aria-label="Language">
+          <div class="menu-item" style="justify-content:space-between">
+            <span>🌐 <span data-i18n="ui.language">Sprache</span></span>
+            <div class="lang-toggle" role="group" aria-label="Language in menu">
+              <button type="button" data-lang="de" aria-pressed="true" class="is-active">DE</button>
+              <button type="button" data-lang="en" aria-pressed="false">EN</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- /Phone -->
+    </div>
+  </div>
+
+  <!-- ===== Content (unchanged) ===== -->
+  <div class="page">
+    <main class="wrap">
+      <section class="card" aria-label="Shop hinzufügen">
+        <h1 class="title">🧾 <span data-i18n="add.title">Shop hinzufügen</span></h1>
+        <p class="subtitle" data-i18n="add.subtitle">Trage die Grunddaten ein und setze den Pin auf der Karte.</p>
+<div class="progress" aria-label="Fortschritt" style="margin:8px 0 4px">
+  <div id="progressBar" class="progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+</div>
+
+        <hr class="sep" />
+
+        <!-- Basics -->
+        <div class="section">
+          <h4 class="label-row"><span data-i18n="add.basics">Basis</span></h4>
+          <div class="grid">
+            <div class="field">
+              <div class="label-row"><label for="name" data-i18n="add.name">Name</label><span class="step-badge" data-step="1">1/5</span></div>
+
+              <input id="name" class="input" type="text" placeholder="Hasir, Rüyam…" data-i18n-placeholder="add.namePh" />
+            </div>
+            <div class="field" style="position:relative">
+  <div class="label-row"><span class="label-icon">📍</span><label for="address" data-i18n="add.addr">Adresse</label><span class="step-badge" data-step="2">2/5</span></div>
+
+  <input id="address" class="input" type="text" placeholder="Straße 1, Berlin…" data-i18n-placeholder="add.addrPh" autocomplete="off" />
+  <div id="addrSug" class="sug-box" role="listbox" style="display:none"></div>
+</div>
+
+          </div>
+        </div>
+
+        <!-- Location -->
+        <div class="section">
+          <h4 class="label-row"><span data-i18n="add.location">Standort</span></h4>
+          <div id="map"></div>
+          <div class="coords" style="margin-top:10px;">
+  <button id="geoBtn" class="btn btn-secondary" type="button">📍 <span data-i18n="add.locate">Meine Position</span></button>
+  <!-- Keep hidden inputs for existing JS/saveShop() parity -->
+  <input id="latInput" type="hidden" />
+  <input id="lngInput" type="hidden" />
+</div>
+
+
+        </div>
+
+        <!-- Categories + Subcategories -->
+        <div class="section">
+          <h4 class="label-row"><span data-i18n="cat.title">Kategorie</span><span class="step-badge" data-step="3">3/5</span></h4>
+
+
+          <!-- main categories -->
+          <div class="chip-row scroller" id="mainCats" data-scroll="x">
+            <label class="chip"><input type="checkbox" id="vegOnly" data-panel="sub-veg"><span>🥬</span><span data-i18n="cat.veg">Vegetarisch</span></label>
+            <label class="chip"><input type="checkbox" id="meatOnly" data-panel="sub-meat"><span>🍖</span><span data-i18n="cat.meat">Fleisch</span></label>
+            <label class="chip"><input type="checkbox" id="saucesOnly" data-panel="sub-sauces"><span>🥫</span><span data-i18n="cat.sauces">Saucen</span></label>
+            <label class="chip"><input type="checkbox" id="breadOnly" data-panel="sub-bread"><span>🥖</span><span data-i18n="cat.bread">Brot hausgemacht</span></label>
+            <label class="chip"><input type="checkbox" id="cards"><span>💳</span><span>Kartenzahlung</span></label>
+          </div>
+
+          <!-- subcategory panels -->
+          <div class="subcats">
+            <div id="sub-veg" class="sub-panel">
+              <div class="label-row" style="margin-bottom:6px"><strong>Vegetarisch – Details</strong></div>
+              <div class="sub-grid" data-subgroup="veg"></div>
+            </div>
+
+            <div id="sub-meat" class="sub-panel">
+              <div class="label-row" style="margin-bottom:6px"><strong>Fleisch – Details</strong></div>
+              <div class="sub-grid" data-subgroup="meat"></div>
+            </div>
+
+            <div id="sub-sauces" class="sub-panel">
+              <div class="label-row" style="margin-bottom:6px"><strong>Saucen – Details</strong></div>
+              <div class="sub-grid" data-subgroup="sauces"></div>
+            </div>
+
+            <div id="sub-bread" class="sub-panel">
+              <div class="label-row" style="margin-bottom:6px"><strong>Brot – Details</strong></div>
+              <div class="sub-grid" data-subgroup="bread"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prices -->
+        <div class="section">
+          <h4 class="label-row"><span data-i18n="price.title">Preise</span><span class="step-badge" data-step="4">4/5</span></h4>
+
+          <div class="grid">
+            <div class="field">
+              <div class="label-row"><span class="label-icon">🥙</span><label for="pK" data-i18n="price.kebap">Kebap €</label></div>
+              <input id="pK" type="number" step="0.1" min="0" placeholder="z.B. 5.5">
+            </div>
+            <div class="field">
+              <div class="label-row"><span class="label-icon">🌯</span><label for="pD" data-i18n="price.durum">Dürüm €</label></div>
+              <input id="pD" type="number" step="0.1" min="0" placeholder="z.B. 6.0">
+            </div>
+            <div class="field">
+              <div class="label-row"><span class="label-icon">📦</span><label for="pB" data-i18n="price.box">Box €</label></div>
+              <input id="pB" type="number" step="0.1" min="0" placeholder="z.B. 7.0">
+            </div>
+          </div>
+        </div>
+
+        <!-- Opening hours -->
+        <div class="section">
+          <h4 class="label-row"><span class="label-icon">⏰</span><span>Öffnungszeiten</span><span class="step-badge" data-step="5">5/5</span></h4>
+
+          <div class="hours-tools" aria-label="Öffnungszeiten Aktionen">
+  <button type="button" id="hoursAllOpen"   class="hbtn">✅ <span>Alle offen</span></button>
+  <button type="button" id="hoursAllClosed" class="hbtn">⛔ <span>Alle geschlossen</span></button>
+ 
+
+  <!-- bulk: same hours for every day -->
+  <div class="hbulk" aria-label="Bulk hours">
+  <button type="button" id="applyAllTimes" class="apply">⮕ <span data-i18n="hours.applyAll">Zeiten auf alle Tage</span></button>
+  <div class="t" title="Startzeit">
+    <span>⏱</span><label for="bulkOpen" class="visually-hidden">Start</label>
+    <input type="time" id="bulkOpen" value="11:00" aria-label="Startzeit (Von)">
+  </div>
+  <span class="dash">–</span>
+  <div class="t" title="Endzeit">
+    <span>⏱</span><label for="bulkClose" class="visually-hidden">Ende</label>
+    <input type="time" id="bulkClose" value="19:00" aria-label="Endzeit (Bis)">
+  </div>
+</div>
+
+</div>
+<!-- removed inline day chips; editing now happens inside the grey overview badges -->
+
+
+<!-- hidden per-day storage for times (keeps saveShop/collectOpeningHours parity) -->
+<div id="hoursHidden" hidden></div>
+<!-- single editor row that opens below the chips -->
+<!-- single editor row that opens below the chips -->
+<!-- removed single editor row; inline editor is rendered per-day inside .hours-overview -->
+
+<!-- compact weekly overview -->
+<div class="hours-overview" id="hoursOverview" aria-label="Wochenübersicht"></div>
+
+
+
+
+        </div>
+
+        <!-- Images -->
+        <div class="section">
+          <h4 class="label-row"><span class="label-icon">🖼️</span><span>Bilder</span><span class="step-badge" aria-hidden="true" style="opacity:.6">optional</span></h4>
+
+          <div class="grid">
+            <div class="field">
+              <label class="label-row">Uploads</label>
+              <label id="dropzone" class="dropzone">
+                <input id="fileInput" type="file" accept="image/*" multiple />
+                <div>Ziehe Bilder hierher oder <u>klicke zum Auswählen</u>.</div>
+                <small style="color:var(--muted)">Tipp: Tippe auf ein Vorschaubild, um es als <b>Hero</b> zu wählen.</small>
+              </label>
+              <div id="dzPreview" class="dz-preview"></div>
+            </div>
+            <div class="field">
+              <label class="label-row">Ausgewähltes Hero-Bild</label>
+              <div id="heroHint" class="pill">Noch keines gewählt – wir nehmen das erste.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+          <button id="saveBtn" class="btn btn-primary" type="button"><span class="i">✅</span><span data-i18n="add.create">Anlegen</span></button>
+          <button class="btn btn-secondary" type="button" onclick="location.href='index.html'"><span class="i">↩️</span><span data-i18n="add.cancel">Abbrechen</span></button>
+        </div>
+      </section>
+      </main>
+  </div>
+
+  <!-- ===== Mobile Bottom Nav (Airbnb-style) ===== -->
+        <nav id="bottomNav" aria-label="Hauptnavigation mobil">
+    <div class="bn-inner">
+      <a class="bn-item" id="bnMap" href="index.html" aria-current="false">
+  <span class="bn-icon">📍</span>                         <!-- simple marker, text glyph -->
+  <span class="bn-label" data-i18n="nav.map">Karte</span>
+</a>
+
+<a class="bn-item" id="bnSelection" href="selection.html" aria-current="false">
+  <span class="bn-icon">#1</span>                         <!-- ranking style -->
+  <span class="bn-label" data-i18n="nav.selection">Preisliste</span>
+</a>
+
+<a class="bn-item bn-add" id="bnAdd" href="add-shop.html" aria-current="page" title="Shop hinzufügen">
+  <span class="bn-icon">＋</span>                         <!-- monochrome plus -->
+  <span class="bn-label" data-i18n="nav.add">Shop hinzufügen</span>
+</a>
+
+<button class="bn-item bn-lang" id="bnLang" type="button" title="Sprache wechseln">
+  <span class="bn-icon">⇆</span>                         <!-- neutral swap -->
+  <span class="bn-label"><span id="bnLangBadge">DE</span></span>
+</button>
+
+<button class="bn-item" id="bnProfile" type="button">
+  <span class="bn-icon">👤</span>                         <!-- person placeholder, color-free -->
+  <span class="bn-label" id="bnProfileText" data-i18n="auth.login">Login</span>
+</button>
+
+    </div>
+  </nav>
+
+
+
+  <!-- Minimal auth modal -->
+ <!-- (remove legacy modal; keep ONLY the two modals copied from selection.html) -->
+
+
+<!-- Auth modals (exactly like selection.html) -->
+
+<!-- Sign-in modal -->
+<div id="authOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:2300">
+
+<div id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" class="auth-card">
+
+    <div class="auth-head">
+
+      <div id="authTitle" class="auth-title" data-i18n="auth.title_login">Anmelden</div>
+
+      <button id="authClose" class="auth-close">✖</button>
+
+    </div>
+
+    <div class="auth-grid">
+
+      <input id="authEmail" type="email" data-i18n-placeholder="auth.email_ph" placeholder="E-Mail" autocomplete="email" class="auth-input" />
+
+      <div class="auth-row">
+  <input id="authPassword" type="password" data-i18n-placeholder="auth.pass_ph" placeholder="Passwort" class="auth-input" />
+  <button id="toggleLoginPassword" type="button" class="toggle-eye" aria-label="Show/Hide password">👁</button>
+</div>
+
+<div id="authError" class="auth-error"></div>
+
+
+<div class="auth-actions">
+  <button id="authSignIn" class="auth-btn auth-primary" style="flex:1" data-i18n="auth.btn_signin">Einloggen</button>
+  <button id="authSignUp" class="auth-btn auth-secondary" style="flex:1" data-i18n="auth.btn_signup">Konto erstellen</button>
+</div>
+
+
+      <div class="auth-divider">
+  <div class="line"></div>
+  <small style="opacity:.8;font-weight:800" data-i18n="auth.or">oder</small>
+  <div class="line"></div>
+</div>
+
+
+      <button id="authGoogle" class="auth-btn auth-google">
+  Mit Google fortfahren
+</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- Sign-up modal -->
+<div id="signupOverlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:2300">
+
+  <div id="signupModal" role="dialog" aria-modal="true" aria-labelledby="signupTitle" class="auth-card">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+      <div id="signupTitle" class="auth-title" data-i18n="auth.title_signup">Konto erstellen</div>
+
+      <button id="signupClose" class="auth-close">✖</button>
+
+    </div>
+
+    <div class="auth-grid">
+
+      <input id="signupName" type="text" placeholder="Vorname" data-i18n-placeholder="auth.first_ph" class="auth-input" />
+
+      <input id="signupSurname" type="text" placeholder="Nachname" data-i18n-placeholder="auth.last_ph" class="auth-input" />
+<input id="signupAge"     type="number" placeholder="Alter" data-i18n-placeholder="auth.age_ph" class="auth-input" />
+<input id="signupEmail"   type="email" placeholder="E-Mail" data-i18n-placeholder="auth.email_ph" class="auth-input" />
+
+
+      <div class="auth-row">
+  <input id="signupPassword"  type="password" placeholder="Passwort" data-i18n-placeholder="auth.pass_ph" class="auth-input" />
+  <button id="toggleSignupPassword" type="button" class="toggle-eye" aria-label="Show/Hide password">👁</button>
+</div>
+
+
+      <div class="auth-row">
+  <input id="signupPassword2" type="password" placeholder="Passwort wiederholen" data-i18n-placeholder="auth.pass_repeat_ph" class="auth-input" />
+  <button id="toggleSignupPassword2" type="button" class="toggle-eye" aria-label="Show/Hide password">👁</button>
+</div>
+
+
+
+      <div id="authErrorSignup" class="auth-error"></div>
+
+      <button id="signupSubmit" class="auth-btn auth-primary" style="width:100%" data-i18n="auth.btn_signup">Konto erstellen</button>
+
+    </div>
+  </div>
+</div>
+
+
+  <!-- ===== i18n (extended: nav/ui/auth + existing page keys) ===== -->
+  <script>
+    const DICTS={de:{
+      nav:{ map:"Karte", selection:"Preisliste", add:"Shop hinzufügen", feedback:"Feedback", about:"Über den Gründer",
+            search_ph:"Suche nach Name, Straße, Tags … (z.B. falafel, scharf)" },
+      ui:{ dark:"Dunkel", light:"Hell", menu:"Menü", language:"Sprache" },
+      hours:{ applyAll:"Zeiten auf alle Tage", open:"Von", close:"Bis", overview:"Wochenübersicht" },
+      auth:{
+        login:"Login", profile:"Profil",
+        title_login:"Anmelden", title_signup:"Konto erstellen",
+        email_ph:"E-Mail", pass_ph:"Passwort", pass_repeat_ph:"Passwort wiederholen",
+        or:"oder",
+        btn_signin:"Einloggen", btn_signup:"Konto erstellen",
+        btn_github:"Mit GitHub fortfahren",
+        err_fill:"Alle Felder ausfüllen.",
+        err_need_email_pass:"Bitte E-Mail und Passwort eingeben.",
+        err_pass_mismatch:"Passwörter stimmen nicht überein.",
+        ok_signed_in:"✅ Eingeloggt",
+        ok_signup_mail:"📨 Bitte bestätige deine E-Mail. Danach kannst du dich einloggen.",
+        first_ph:"Vorname", last_ph:"Nachname", age_ph:"Alter"
+      },
+
+
+      add:{title:"Shop hinzufügen", subtitle:"Trage die Grunddaten ein und setze den Pin auf der Karte.", basics:"Basis",
+           name:"Name", namePh:"Hasir, Rüyam…", addr:"Adresse", addrPh:"Straße 1, Berlin…",
+           location:"Standort", locate:"Meine Position", create:"Anlegen", cancel:"Abbrechen"},
+      cat:{title:"Kategorie", veg:"Vegetarisch", meat:"Fleisch", sauces:"Saucen", bread:"Brot hausgemacht"},
+      price:{title:"Preise", kebap:"Kebap €", durum:"Dürüm €", box:"Box €"},
+      msg:{needName:"Bitte einen Namen eingeben.", needPos:"Bitte einen Punkt auf der Karte setzen.",
+           saved:"Shop gespeichert ✅", saving:"Speichere…", error:"Speichern fehlgeschlagen. Details in der Konsole."},
+      days:{mon:"Montag",tue:"Dienstag",wed:"Mittwoch",thu:"Donnerstag",fri:"Freitag",sat:"Samstag",sun:"Sonntag"},
+    }, en:{
+      nav:{ map:"Map", selection:"Price list", add:"Add Shop", feedback:"Feedback", about:"About the founder",
+            search_ph:"Search name, street, tags … (e.g. falafel, spicy)" },
+      ui:{ dark:"Dark", light:"Light", menu:"Menu", language:"Language" },
+      hours:{ applyAll:"Apply to all days", open:"From", close:"To", overview:"Week overview" },
+      auth:{
+        login:"Login", profile:"Profile",
+        title_login:"Sign in", title_signup:"Create account",
+        email_ph:"Email", pass_ph:"Password", pass_repeat_ph:"Repeat password",
+        or:"or",
+        btn_signin:"Sign in", btn_signup:"Create account",
+        btn_github:"Continue with GitHub",
+        err_fill:"Please fill in all fields.",
+        err_need_email_pass:"Please enter email and password.",
+        err_pass_mismatch:"Passwords do not match.",
+        ok_signed_in:"✅ Signed in",
+        ok_signup_mail:"📨 Please confirm your email, then you can sign in.",
+        first_ph:"First name", last_ph:"Last name", age_ph:"Age"
+      },
+
+
+      add:{title:"Add Shop", subtitle:"Fill the basics and drop the pin on the map.", basics:"Basics",
+           name:"Name", namePh:"Hasir, Rüyam…", addr:"Address", addrPh:"Street 1, Berlin…",
+           location:"Location", locate:"My location", create:"Create", cancel:"Cancel"},
+      cat:{title:"Category", veg:"Vegetarian", meat:"Meat", sauces:"Sauces", bread:"Homemade bread"},
+      price:{title:"Prices", kebap:"Kebap €", durum:"Durum €", box:"Box €"},
+      msg:{needName:"Please enter a name.", needPos:"Please set a point on the map.",
+           saved:"Shop saved ✅", saving:"Saving…", error:"Save failed. See console."},
+      days:{mon:"Monday",tue:"Tuesday",wed:"Wednesday",thu:"Thursday",fri:"Friday",sat:"Saturday",sun:"Sunday"},
+    }};
+    const I18N=(()=>{let lang='de',dict=DICTS.de;
+      const get=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k]!=null?a[k]:undefined,o);
+      const t=(k,fb)=>get(dict,k)??fb??k;
+     function apply(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n,el.textContent.trim()));
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder, el.getAttribute('placeholder')||'')));
+  document.documentElement.lang=lang;
+
+  // toggle states
+  document.querySelectorAll('.lang-toggle [data-lang]').forEach(b=>{const on=b.dataset.lang===lang; b.classList.toggle('is-active',on); b.setAttribute('aria-pressed',on?'true':'false');});
+
+  // theme labels
+  const theme = document.documentElement.getAttribute('data-theme') || 'light';
+  const themeText = document.getElementById('themeText');
+  const mobileThemeText = document.getElementById('mobileThemeText');
+  if(themeText) themeText.textContent = (theme==='dark') ? t('ui.light') : t('ui.dark');
+  if(mobileThemeText) mobileThemeText.textContent = (theme==='dark') ? t('ui.light') : t('ui.dark');
+
+  // login labels (if not personalized yet) – DO NOT overwrite "Hi, …"
+  const loginText = document.getElementById('loginText');
+  const mobileLoginText = document.getElementById('mobileLoginText');
+  const bnProfileText = document.getElementById('bnProfileText');
+  const isHi = (s)=> typeof s==='string' && s.trim().toLowerCase().startsWith('hi,');
+  if(loginText && !isHi(loginText.textContent)) loginText.textContent = t('auth.login');
+  if(mobileLoginText && !isHi(mobileLoginText.textContent)) mobileLoginText.textContent = t('auth.login');
+  if(bnProfileText && !isHi(bnProfileText.textContent)) bnProfileText.textContent = t('auth.login');
+
+
+    // bottom-nav language badge
+    const bnBadge = document.getElementById('bnLangBadge');
+  if(bnBadge) bnBadge.textContent = (lang==='en'?'EN':'DE');  // plain text, no square
+
+  // keep bottom bar active mark after language changes
+  try{ window.markActiveBottom?.(); }catch(_){}
+}
+
+
+
+      function set(l){lang=l;dict=DICTS[l]||DICTS.de;localStorage.setItem('lang',l);apply();}
+      function init(){set(localStorage.getItem('lang')||(['de','en'].includes((navigator.language||'').slice(0,2))?(navigator.language||'').slice(0,2):'de'));
+        document.addEventListener('click',e=>{const b=e.target.closest('.lang-toggle [data-lang]'); if(b) set(b.dataset.lang);});}
+      return {init,t,cur:()=>lang,set};
+
+    })();
+    document.addEventListener('DOMContentLoaded', I18N.init);
+  </script>
+
+  <!-- ===== Dark mode + mobile dropdown + active highlight ===== -->
+  <script>
+    (function(){
+      const themeBtn  = document.getElementById('themeBtn');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeText = document.getElementById('themeText');
+
+      // Mobile dropdown refs
+      const menuBtn   = document.getElementById('menuBtn');
+      const mobileMenu= document.getElementById('mobileMenu');
+      const mobileThemeBtn = document.getElementById('mobileTheme');
+      const mobileThemeText= document.getElementById('mobileThemeText');
+
+      function setTheme(mode){
+        document.documentElement.setAttribute('data-theme', mode);
+        localStorage.setItem('theme', mode);
+        if(themeIcon) themeIcon.textContent = mode === 'dark' ? '🌞' : '🌙';
+        if(themeText) themeText.textContent = (mode==='dark') ? I18N.t('ui.light') : I18N.t('ui.dark');
+        if(mobileThemeText) mobileThemeText.textContent = (mode==='dark') ? I18N.t('ui.light') : I18N.t('ui.dark');
+      }
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(stored || (prefersDark ? 'dark' : 'light'));
+
+      themeBtn?.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+      mobileThemeBtn?.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+
+      // Mobile dropdown open/close + active mark
+            // Mobile dropdown open/close + active mark
+      function closeMenu(){ mobileMenu?.classList.remove('open'); menuBtn?.setAttribute('aria-expanded','false'); }
+      function currentPage(){ return (location.pathname.split('/').pop() || 'index.html').toLowerCase(); }
+      function markActiveMobile(){
+        const here = currentPage();
+        document.querySelectorAll('#mobileMenu .menu-item[href]').forEach(a=>{
+          const target = (a.getAttribute('href') || '').toLowerCase();
+          const match  = target === here || target === ('./' + here);
+          a.classList.toggle('is-active', match);
+          if (match) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
+        });
+      }
+      // Bottom nav active mark
+            function markActiveBottom(){
+        const here = currentPage();
+        const map = document.getElementById('bnMap');
+        const sel = document.getElementById('bnSelection');
+        const add = document.getElementById('bnAdd');
+        [map,sel,add].forEach(el=>{
+          if(!el) return;
+          const href = (el.getAttribute('href')||'').toLowerCase();
+          const match = href === here || href === ('./'+here);
+          el.classList.toggle('is-active', match);
+          el.setAttribute('aria-current', match ? 'page' : 'false');
+        });
+      }
+
+
+      function toggleMenu(){
+        if(!mobileMenu) return;
+        const open = !mobileMenu.classList.contains('open');
+        if(open){
+          mobileMenu.classList.add('open');
+          menuBtn?.setAttribute('aria-expanded','true');
+          markActiveMobile();
+        } else {
+          closeMenu();
+        }
+      }
+      window.closeMenu = closeMenu;
+
+      // initial mark
+      markActiveMobile();
+
+            menuBtn?.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMenu(); });
+      document.addEventListener('click', (e)=>{
+        if(!mobileMenu?.classList.contains('open')) return;
+        const inside = e.target.closest('#mobileMenu') || e.target.closest('#menuBtn');
+        if(!inside) closeMenu();
+      });
+      window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+
+      // Bottom nav: profile button opens profile or auth
+            // Bottom nav: profile button opens profile or auth
+      document.getElementById('bnProfile')?.addEventListener('click', async ()=>{
+  // works regardless of current language
+  const { data } = await supa.auth.getUser();
+  if (data?.user) { window.location.href = 'profile.html'; return; }
+  openAuth();
+});
+
+
+      // Bottom nav: language toggle (cycles DE ⇄ EN by triggering header toggle)
+   document.getElementById('bnLang')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  const cur  = (window.I18N && I18N.cur) ? I18N.cur() : (localStorage.getItem('lang') || 'de');
+  const next = cur === 'de' ? 'en' : 'de';
+
+  // Prefer direct API; fallback to header toggle click if needed
+  if (window.I18N && I18N.set) {
+    I18N.set(next);
+  } else {
+    document.querySelector(`.lang-toggle [data-lang="${next}"]`)?.click();
+  }
+
+  // Update badge instantly for mobile perception
+  const bnBadge = document.getElementById('bnLangBadge');
+  if (bnBadge) bnBadge.textContent = (next === 'en' ? 'EN' : 'DE');
+});
+
+
+
+
+
+      // Initial active marks and badge
+      markActiveBottom();
+      const badge = document.getElementById('bnLangBadge');
+      if(badge){ badge.textContent = (I18N && I18N.cur && I18N.cur()) || 'DE'; }
+
+      // Navbar search: visual only here
+      const navInput = document.getElementById('navSearchInput');
+      navInput?.addEventListener('input', ()=>{ /* no-op on this page */ });
+    })();
+  </script>
+
+  <!-- ===== SPLIT HERE: paste Part 2/2 immediately after this line ===== -->
+  <!-- Libs -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- (removed old auth block; unified block is used below) -->
+
+
+
+  <script>
+    const SUPABASE_URL  = 'https://bcxeaxhhhvagpvomtsyi.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjeGVheGhoaHZhZ3B2b210c3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTUxMzcsImV4cCI6MjA3MDgzMTEzN30.HCnWgapZrDY4RIgdXM5eh2UkslFpSSuJwEUszZHtp0w';
+    const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const storage = supa.storage.from('shop-images'); // bucket must exist & be public
+
+    // ---- Small helpers to keep labels localized even if this page loaded before I18N.init
+    function T(k, fb){ try{ return (window.I18N && I18N.t) ? I18N.t(k, fb) : (fb || k); }catch(_){ return fb || k; } }
+    function curLang(){ try{ return (window.I18N && I18N.cur) ? I18N.cur() : (document.documentElement.lang || 'de'); }catch(_){ return 'de'; } }
+
+    // ---- Auth modal open/close (same API as other pages)
+    // ---- Auth modal + handlers (shared with price list style)
+function openAuth(){
+  const ov = document.getElementById('authOverlay'); if(!ov) return;
+  const email = document.getElementById('authEmail');
+  const pass1 = document.getElementById('authPassword');
+  if(email) email.placeholder = T('auth.email_ph','E-Mail');
+  if(pass1) pass1.placeholder = T('auth.pass_ph','Passwort');
+  const err = document.getElementById('authError'); if(err) err.textContent='';
+  ov.style.display = 'flex';
+}
+
+function closeAuth(){ const ov = document.getElementById('authOverlay'); if(ov) ov.style.display = 'none'; }
+
+function setAuthMode(_mode){
+  // No-op for selection.html modals (separate Sign In / Sign Up)
+  const t = document.getElementById('authTitle');
+  if(t) t.textContent = T('auth.title_login','Anmelden');
+  const err = document.getElementById('authError'); if(err) err.textContent='';
+}
+
+
+// Close modal (sign-in)
+document.getElementById('authClose')?.addEventListener('click', closeAuth);
+document.getElementById('authOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='authOverlay') closeAuth(); });
+
+// Close modal (sign-up) — ✖ and outside click
+document.getElementById('signupClose')?.addEventListener('click', () => {
+  const ov = document.getElementById('signupOverlay');
+  if (ov) ov.style.display = 'none';
+});
+document.getElementById('signupOverlay')?.addEventListener('click', (e) => {
+  if (e.target.id === 'signupOverlay') e.currentTarget.style.display = 'none';
+});
+
+document.getElementById('tabSignUp')?.addEventListener('click', ()=> setAuthMode('up'));
+
+document.getElementById('authPrimary')?.addEventListener('click', async ()=>{
+  const mode = document.getElementById('authPrimary').dataset.mode || 'in';
+  const email = (document.getElementById('authEmail').value||'').trim();
+  const pass1 = document.getElementById('authPassword').value||'';
+  const pass2 = document.getElementById('authPassword2').value||'';
+  const err = document.getElementById('authError');
+  if(err){ err.style.color = '#ef4444'; err.textContent=''; }
+
+  if(!email || !pass1){ err.textContent = T('auth.err_need_email_pass','Bitte E-Mail und Passwort eingeben.'); return; }
+  if(mode==='up' && pass1 !== pass2){ err.textContent = T('auth.err_pass_mismatch','Passwörter stimmen nicht überein.'); return; }
+
+  try{
+    if(mode==='in'){
+      const { error } = await supa.auth.signInWithPassword({ email, password: pass1 });
+      if(error) throw error;
+      closeAuth();
+    }else{
+      const { error } = await supa.auth.signUp({ email, password: pass1 });
+      if(error) throw error;
+      err.style.color = '#16a34a';
+      err.textContent = T('auth.ok_signup_mail','📨 Bitte bestätige deine E-Mail. Danach kannst du dich einloggen.');
+    }
+  }catch(e){
+    err.textContent = e?.message || T('auth.err_fill','Alle Felder ausfüllen.');
+  }
+});
+
+document.getElementById('authGoogle')?.addEventListener('click', async ()=>{
+  const err = document.getElementById('authError');
+  try{
+const redirectTo = location.origin + location.pathname + location.search; // keep /Kebab/... path
+const { error } = await supa.auth.signInWithOAuth({
+  provider: 'google',
+  options: {
+    redirectTo,
+    scopes: 'openid email profile',
+    // force Google to show the account chooser / consent every time
+    queryParams: { prompt: 'select_account', access_type: 'offline' }
+  }
+});
+
+    if(error) throw error;
+    closeAuth();
+  }catch(e){ if(err) err.textContent = e?.message || 'OAuth error'; }
+});
+
+
+// Desktop button opens modal or profile
+document.getElementById('loginBtn')?.addEventListener('click', async () => {
+  const { data } = await supa.auth.getUser();
+  if (data?.user) { window.location.href = 'profile.html'; return; }
+  openAuth();
+});
+
+// Mobile menu login
+document.getElementById('mobileLogin')?.addEventListener('click', async () => {
+  const { data } = await supa.auth.getUser();
+  if (data?.user) { window.location.href = 'profile.html'; return; }
+  window.closeMenu?.();
+  openAuth();
+});
+
+    // ---- Keep Login/Profile label coherent (desktop + optional mobile)
+   async function setUser(user){
+  const loginBtn  = document.getElementById('loginBtn');
+  const loginText = document.getElementById('loginText');
+  const mobileLoginText = document.getElementById('mobileLoginText');
+  const bnProfileText = document.getElementById('bnProfileText');
+
+  if(user){
+    if(loginBtn) loginBtn.title = T('auth.profile','Profil');
+
+    // Prefer profiles.display_name (edited on profile.html), fall back to user_metadata
+    let display = null;
+    try{
+      const res = await supa
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .maybeSingle?.();
+      display = res?.data?.display_name || null;
+    }catch(_){}
+
+    if(!display){
+      display =
+        user.user_metadata?.display_name ||
+        user.user_metadata?.first_name ||
+        user.user_metadata?.user_name ||
+        user.user_metadata?.full_name ||
+        (user.email ? user.email.split('@')[0] : 'User');
+    }
+
+     const label = `Hi, ${display}`;
+    if(loginText) loginText.textContent = label;
+    if(mobileLoginText) mobileLoginText.textContent = label;
+    if(bnProfileText) bnProfileText.textContent = label;
+  } else {
+    const fallback = T('auth.login','Login');
+    if(loginBtn)  loginBtn.title = fallback;
+    if(loginText) loginText.textContent = fallback;
+    if(mobileLoginText) mobileLoginText.textContent = fallback;
+    if(bnProfileText) bnProfileText.textContent = fallback;
+  }
+}
+
+
+
+    // ---- Optional: set a display_name in your 'profiles' table (same as other pages)
+    async function upsertProfile(user){
+      if(!user) return;
+      try{
+        const display =
+          user.user_metadata?.user_name ||
+          user.user_metadata?.full_name ||
+          (user.email ? user.email.split('@')[0] : 'User');
+        await supa.from('profiles').upsert({ id: user.id, display_name: display }, { onConflict: 'id' });
+      }catch(_){}
+    }
+
+    // ---- Bootstrap auth and wire up actions (mirrors other pages)
+   document.addEventListener('DOMContentLoaded', async () => {
+  // if we just came back from OAuth, clean the hash
+  if (location.hash && /access_token=/.test(location.hash)) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  // Session + listener
+
+  // Clean OAuth hash tokens from URL (access_token, refresh_token, etc.)
+  if (location.hash && /access_token=/.test(location.hash)) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  // Session + listener
+
+      // Session + listener
+      const { data:{ session } } = await supa.auth.getSession();
+      await upsertProfile(session?.user ?? null);
+      await setUser(session?.user ?? null);
+      supa.auth.onAuthStateChange(async (_event, session) => {
+        await upsertProfile(session?.user ?? null);
+        await setUser(session?.user ?? null);
+      });
+
+      // Desktop login/profile
+      document.getElementById('loginBtn')?.addEventListener('click', async () => {
+        const { data } = await supa.auth.getUser();
+        if (data?.user) { window.location.href = 'profile.html'; return; }
+        openAuth();
+      });
+
+      // Optional mobile menu login button (if present on this page)
+      document.getElementById('mobileLogin')?.addEventListener('click', async () => {
+        const { data } = await supa.auth.getUser();
+        if (data?.user) { window.location.href = 'profile.html'; return; }
+        window.closeMenu?.(); // if your mobile dropdown helper exists
+        openAuth();
+      });
+
+      // Close modal
+      document.getElementById('authClose')?.addEventListener('click', closeAuth);
+      document.getElementById('authOverlay')?.addEventListener('click', (e)=>{ if(e.target.id==='authOverlay') closeAuth(); });
+
+      // Toggle password visibility (eye buttons)
+document.getElementById('toggleLoginPassword')?.addEventListener('click', () => {
+  const inp = document.getElementById('authPassword');
+  if (!inp) return;
+  const on = inp.type === 'password';
+  inp.type = on ? 'text' : 'password';
+  document.getElementById('toggleLoginPassword').classList.toggle('active', on);
+});
+document.getElementById('toggleSignupPassword')?.addEventListener('click', () => {
+  const inp = document.getElementById('signupPassword');
+  if (!inp) return;
+  const on = inp.type === 'password';
+  inp.type = on ? 'text' : 'password';
+  document.getElementById('toggleSignupPassword').classList.toggle('active', on);
+});
+
+document.getElementById('toggleSignupPassword2')?.addEventListener('click', () => {
+  const inp = document.getElementById('signupPassword2');
+  if (!inp) return;
+  const on = inp.type === 'password';
+  inp.type = on ? 'text' : 'password';
+  document.getElementById('toggleSignupPassword2').classList.toggle('active', on);
+});
+
+
+
+      // Sign in (email/pass)
+      document.getElementById('authSignIn')?.addEventListener('click', async () => {
+        const email = (document.getElementById('authEmail').value||'').trim();
+        const password = document.getElementById('authPassword').value||'';
+        const err = document.getElementById('authError');
+        if(err) err.textContent = '';
+        if(!email || !password){ if(err) err.textContent = T('auth.err_need_email_pass','Bitte E-Mail und Passwort eingeben.'); return; }
+
+        const { error } = await supa.auth.signInWithPassword({ email, password });
+        if (error) { if(err) err.textContent = error.message; return; }
+        closeAuth();
+        // Optional toast, if you add one to this page:
+        // try{ toast(T('auth.ok_signed_in','✅ Eingeloggt')); }catch(_){}
+      });
+
+      // Sign up (email/pass)
+      document.getElementById('authSignUp')?.addEventListener('click', () => {
+  // Open the dedicated signup popup like in the price list
+  closeAuth();
+  const ov = document.getElementById('signupOverlay');
+  const err = document.getElementById('authErrorSignup');
+  if(err){ err.style.color = '#ef4444'; err.textContent = ''; }
+  if(ov) ov.style.display = 'flex';
+});
+
+    });
+  </script>
+
+  <!-- ===== Page logic (map, hours, chips, dropzone, uploads, save) ===== -->
+  <script>
+    // Subcategory config (unchanged)
+    const SUBCATS = {
+      veg: [
+        {id:'veg_falafel',  label:'Falafel'},
+        {id:'veg_halloumi', label:'Halloumi'},
+        {id:'veg_vegan',    label:'Vegan'},
+        {id:'veg_käse',     label:'Käse'}
+      ],
+      meat: [
+        {id:'meat_kalbfleisch', label:'Kalbfleisch'},
+        {id:'meat_hähnchen',    label:'Hähnchen'},
+        {id:'meat_lamm',        label:'Lamm'},
+        {id:'meat_rind',        label:'Rind'}
+      ],
+      sauces: [
+        {id:'sauce_knoblauch', label:'Knoblauch'},
+        {id:'sauce_chili',     label:'Chili'},
+        {id:'sauce_kraut',     label:'Kräuter'},
+        {id:'sauce_joghurt',   label:'Joghurt'}
+      ],
+      bread: [
+        {id:'bread_durum',     label:'Dürüm (Yufka)'},
+        {id:'bread_fladen',    label:'Fladenbrot'},
+        {id:'bread_vollkorn',  label:'Vollkorn'},
+        {id:'bread_hausgem',   label:'Hausgemacht (Ofen)'}
+      ]
+    };
+
+    // Helpers
+    const $=s=>document.querySelector(s);
+    const $$=s=>Array.from(document.querySelectorAll(s));
+    function refreshChips(){ $$('.chip').forEach(lb=>{ const i=lb.querySelector('input'); 
+    // Drag-to-scroll for .scroller rows
+(function(){
+  const el = document.querySelector('.chip-row.scroller');
+  if(!el) return;
+  let isDown=false, startX=0, scrollLeft=0;
+
+  el.addEventListener('mousedown', (e)=>{ isDown=true; startX=e.pageX - el.offsetLeft; scrollLeft=el.scrollLeft; el.style.cursor='grabbing'; e.preventDefault(); });
+  ['mouseleave','mouseup'].forEach(ev=> el.addEventListener(ev, ()=>{ isDown=false; el.style.cursor=''; }));
+  el.addEventListener('mousemove', (e)=>{ if(!isDown) return; const x=e.pageX - el.offsetLeft; const walk=(x-startX)*1; el.scrollLeft = scrollLeft - walk; });
+
+  // Show/hide edge mask by toggling padding mask with shadow (optional)
+  function refreshMask(){
+    const atStart = el.scrollLeft <= 2;
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+    el.style.maskImage = (atStart && atEnd)
+      ? 'none'
+      : 'linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%)';
+  }
+  el.addEventListener('scroll', refreshMask, { passive:true });
+  window.addEventListener('resize', refreshMask);
+  setTimeout(refreshMask, 0);
+})();
+ if(!i) return; lb.classList.toggle('active', i.checked); }); }
+    const toNum = (v)=>{ if(v===''||v==null) return null; const n=parseFloat(String(v).replace(',','.')); return Number.isFinite(n)?n:null; };
+    function slugify(s){ return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'shop'; }
+    function randomId(len=5){ const chars='abcdefghjkmnpqrstuvwxyz23456789'; let out=''; for(let i=0;i<len;i++) out+=chars[Math.floor(Math.random()*chars.length)]; return out; }
+
+    // ---- Geocoding + suggestions (GLOBAL)
+const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
+
+async function geocodeAddress(q){
+  if(!q || q.trim().length < 3) throw new Error('empty');
+  const url = `${NOMINATIM_BASE}/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(q)}`;
+  const res = await fetch(url, { headers: { 'Accept':'application/json' }});
+  if(!res.ok) throw new Error('geocode http ' + res.status);
+  const json = await res.json();
+  if(!json?.length) throw new Error('not found');
+  const { lat, lon } = json[0];
+  return { lat: parseFloat(lat), lng: parseFloat(lon) };
+}
+
+async function reverseGeocode(lat, lng){
+  const url = `${NOMINATIM_BASE}/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1&accept-language=${(curLang?.()||'de')}`;
+  const res = await fetch(url, { headers: { 'Accept':'application/json' }});
+  if(!res.ok) throw new Error('reverse http ' + res.status);
+  const json = await res.json();
+  const display = json?.display_name?.trim() || '';
+  const addrInput = document.getElementById('address');
+  if (addrInput) addrInput.value = display;   // ← ALWAYS set the address
+  return display;
+}
+
+async function fetchSuggestions(q){
+  if(!q || q.trim().length < 3) return [];
+  const url = `${NOMINATIM_BASE}/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(q)}&accept-language=${(curLang?.()||'de')}`;
+  const res = await fetch(url, { headers: { 'Accept':'application/json' }});
+  if(!res.ok) return [];
+  const arr = await res.json();
+  return (arr||[]).map(r => ({
+    label: r.display_name,
+    lat: parseFloat(r.lat),
+    lng: parseFloat(r.lon)
+  }));
+}
+
+function showSuggestions(list){
+  const box = document.getElementById('addrSug'); if(!box) return;
+  if(!list.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML = list.map((it,i)=>`<div class="sug-item" role="option" data-i="${i}" tabindex="-1">${it.label}</div>`).join('');
+  box.style.display='block';
+}
+function hideSuggestions(){
+  const box = document.getElementById('addrSug'); if(!box) return;
+  box.style.display='none'; box.innerHTML='';
+}
+
+// Simple debounce (global)
+function debounce(fn, ms=600){
+  let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+}
+
+    // Opening hours UI
+    const DAY_KEYS=['mon','tue','wed','thu','fri','sat','sun'];
+    const HOURS_DEFAULT={open:'11:00', close:'19:00'};
+  function buildHoursUI(){
+  const hidden = document.getElementById('hoursHidden');
+  hidden.innerHTML = '';
+  DAY_KEYS.forEach(k=>{
+    hidden.innerHTML += `
+      <input type="checkbox" id="day-${k}" class="visually-hidden">
+      <input type="time" id="open-${k}" value="${HOURS_DEFAULT.open}">
+      <input type="time" id="close-${k}" value="${HOURS_DEFAULT.close}">
+    `;
+  });
+}
+
+
+
+
+
+
+    function collectOpeningHours(){
+  const obj={}; const daysOn=[];
+  DAY_KEYS.forEach(k=>{
+    const on = document.getElementById('day-'+k).checked;
+    if(on){
+      const open  = document.getElementById('open-'+k).value || HOURS_DEFAULT.open;
+      const close = document.getElementById('close-'+k).value || HOURS_DEFAULT.close;
+      const touched = document.getElementById('open-'+k).dataset.touched === '1' ||
+                      document.getElementById('close-'+k).dataset.touched === '1';
+      obj[k] = touched ? [{open, close}] : null;
+      daysOn.push(k);
+    } else {
+      obj[k] = null;
+    }
+  });
+  return { opening_hours: obj, opening_days: daysOn.join(',') };
+}
+
+
+
+
+    // Map
+    let map, marker=null;
+   function setMarker(lat, lng, {doReverse=true, pan=false} = {}){
+  if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  if(marker) map.removeLayer(marker);
+  marker = L.marker([lat, lng]).addTo(map);
+  if(pan) map.setView([lat, lng], Math.max(map.getZoom(), 15));
+
+  // Keep hidden inputs synced for saveShop()
+  const li = document.getElementById('latInput');
+  const gi = document.getElementById('lngInput');
+  if(li) li.value = Number(lat).toFixed(6);
+  if(gi) gi.value = Number(lng).toFixed(6);
+
+  if(doReverse) reverseGeocode(lat, lng).catch(()=>{});
+}
+
+
+
+    // Uploads
+    const selectedFiles = [];
+let heroIndex = 0;        // image #1 is always the hero
+let dragIndex = -1;       // for drag & drop reordering
+
+
+    function addFiles(list){
+  for(const file of list){
+    if(!file.type.startsWith('image/')) continue;
+    selectedFiles.push(file);
+  }
+  // keep first as hero implicitly
+  heroIndex = 0;
+  renderPreviews();
+}
+
+  function renderPreviews(){
+  const box = document.getElementById('dzPreview');
+  box.innerHTML = '';
+
+  // image #1 is ALWAYS the hero (index 0)
+  if(selectedFiles.length > 0) heroIndex = 0;
+
+  selectedFiles.forEach((file, idx)=>{
+    const url = URL.createObjectURL(file);
+    const div = document.createElement('div');
+    div.className = 'dz-thumb' + (idx===0 ? ' is-hero' : '');
+    div.setAttribute('draggable','true');
+    div.dataset.idx = String(idx);
+    div.innerHTML = `
+      <img src="${url}" alt="">
+      <small>${idx+1}</small>
+      <button type="button" class="dz-remove" title="${curLang()==='en' ? 'Remove' : 'Entfernen'}">✖</button>
+    `;
+
+    // remove single image
+    div.querySelector('.dz-remove').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      selectedFiles.splice(idx,1);
+      renderPreviews();
+    });
+
+    // drag & drop reordering
+    div.addEventListener('dragstart', (e)=>{
+      dragIndex = idx;
+      div.classList.add('dragging');
+      e.dataTransfer?.setData('text/plain', String(idx));
+      e.dataTransfer?.setDragImage(div, 48, 48);
+    });
+    div.addEventListener('dragend', ()=> div.classList.remove('dragging'));
+
+    box.appendChild(div);
+  });
+
+  // container DnD handlers (reorder on drop)
+  box.ondragover = (e)=>{ e.preventDefault(); };
+  box.ondrop = (e)=>{
+    e.preventDefault();
+    const target = e.target.closest('.dz-thumb');
+    const from = dragIndex;
+    const to = target ? parseInt(target.dataset.idx, 10) : selectedFiles.length - 1;
+    if(Number.isInteger(from) && Number.isInteger(to) && from !== to){
+      const [moved] = selectedFiles.splice(from,1);
+      selectedFiles.splice(to,0,moved);
+    }
+    dragIndex = -1;
+    renderPreviews(); // re-render with new order (index 0 stays hero)
+  };
+
+  const hint = document.getElementById('heroHint');
+  if(hint){
+    hint.textContent = (curLang()==='en')
+      ? 'Hero = image #1 (left). Hold left click and drag to reorder.'
+      : 'Hero = Bild #1 (links). Mit gedrückter linker Maustaste ziehen, um umzuordnen.';
+  }
+
+  updateProgress();
+}
+
+
+    async function uploadAllImages(folder){
+  const urls = [];
+  let heroUrl = null;
+  for(let i=0;i<selectedFiles.length;i++){
+    const f = selectedFiles[i];
+    const safeName = `${Date.now()}_${i}_${(f.name||'img').replace(/[^a-z0-9\.\-_]/gi,'_')}`;
+    const path = `${folder}/${safeName}`;
+    const { data: up, error } = await storage.upload(path, f, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: f.type || 'image/jpeg'
+    });
+    if (error) {
+      console.error('[Supabase Storage] upload failed', { path, error });
+      throw error;
+    }
+    const { data } = storage.getPublicUrl(path);
+    const url = data?.publicUrl || null;
+    if(url){
+      urls.push(url);
+      if(i === 0) heroUrl = url; // first image is always hero
+    }
+  }
+  return { heroUrl, urls };
+}
+
+
+    // Subcategory UI render & toggle
+    function renderSubchips(){
+      Object.entries(SUBCATS).forEach(([group, items])=>{
+        const host = document.querySelector(`.sub-grid[data-subgroup="${group}"]`);
+        if(!host) return;
+        host.innerHTML = items.map(it=>`
+          <label class="sub-chip">
+            <input type="checkbox" data-sub="${group}" value="${it.id}">
+            <span>${it.label}</span>
+          </label>
+        `).join('');
+      });
+    }
+    function refreshSubchipStyles(){
+      document.querySelectorAll('.sub-chip').forEach(lb=>{
+        const i=lb.querySelector('input'); if(!i) return;
+        lb.classList.toggle('active', i.checked);
+      });
+    }
+    function togglePanelsByMainCats(){
+      document.querySelectorAll('#mainCats input[type="checkbox"][data-panel]').forEach(inp=>{
+        const panelId = inp.getAttribute('data-panel');
+        const panel = document.getElementById(panelId);
+        if(panel) panel.classList.toggle('open', inp.checked);
+      });
+    }
+    function collectSubcategories(){
+      const out={veg:[],meat:[],sauces:[],bread:[]};
+      document.querySelectorAll('.sub-chip input:checked').forEach(i=>{
+        const g=i.getAttribute('data-sub'); const v=i.value;
+        if(out[g] && v) out[g].push(v);
+      });
+      return out;
+    }
+
+    // Init page
+    document.addEventListener('DOMContentLoaded', ()=>{
+
+    // ---- Progress helpers (6 steps)
+   function updateProgress(){
+  const stepsTotal = 5; // images are optional now
+
+  // Step checks
+  const name = (document.getElementById('name')?.value||'').trim();
+  const s1 = !!name;
+
+  const addr = (document.getElementById('address')?.value||'').trim();
+  const hasMarker = !!(window.marker && typeof marker?.getLatLng === 'function');
+  const s2 = !!(addr && hasMarker);
+
+  const s3 = document.querySelectorAll('#mainCats input[type="checkbox"]:checked').length > 0;
+
+  const anyPrice = ['pK','pD','pB'].some(id => {
+    const v = document.getElementById(id)?.value;
+    if(v===''||v==null) return false;
+    const n = parseFloat(String(v).replace(',','.'));
+    return Number.isFinite(n);
+  });
+  const s4 = anyPrice;
+
+  const s5 = DAY_KEYS.some(k => document.getElementById('day-'+k)?.checked);
+
+  const steps = [s1, s2, s3, s4, s5];
+  const doneCount = steps.filter(Boolean).length;
+
+  const pct = Math.round((doneCount/stepsTotal)*100);
+  const bar = document.getElementById('progressBar');
+  if(bar){
+    bar.style.width = pct + '%';
+    bar.setAttribute('aria-valuenow', String(pct));
+  }
+
+  // Only badges with data-step are counted (images badge has no data-step)
+  document.querySelectorAll('.step-badge').forEach(b=>{
+    const stepIndex = Math.max(1, Number(b.dataset.step||'0')) - 1; // 0..4
+    if (stepIndex >= 0) b.classList.toggle('done', !!steps[stepIndex]);
+  });
+
+  try{ renderOverview(); }catch(_){}
+}
+
+
+    // common listeners
+    document.getElementById('name')?.addEventListener('input', updateProgress);
+    ['pK','pD','pB'].forEach(id=> document.getElementById(id)?.addEventListener('input', updateProgress));
+
+    async function fetchSuggestions(q){
+  if(!q || q.trim().length < 3) return [];
+  const url = `${NOMINATIM_BASE}/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(q)}&accept-language=${(curLang?.()||'de')}`;
+  const res = await fetch(url, { headers: { 'Accept':'application/json' }});
+  if(!res.ok) return [];
+  const arr = await res.json();
+  return (arr||[]).map(r => ({
+    label: r.display_name,
+    lat: parseFloat(r.lat),
+    lng: parseFloat(r.lon)
+  }));
+}
+function showSuggestions(list){
+  const box = document.getElementById('addrSug'); if(!box) return;
+  if(!list.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML = list.map((it,i)=>`<div class="sug-item" role="option" data-i="${i}" tabindex="-1">${it.label}</div>`).join('');
+  box.style.display='block';
+}
+function hideSuggestions(){
+  const box = document.getElementById('addrSug'); if(!box) return;
+  box.style.display='none'; box.innerHTML='';
+}
+
+/* duplicate Nominatim helpers removed — already defined above */
+
+
+// Weekly overview renderer (badges under chips)
+function renderOverview(){
+  const host = document.getElementById('hoursOverview'); if(!host) return;
+  host.innerHTML = DAY_KEYS.map(k=>{
+    const on = document.getElementById('day-'+k).checked;
+    const o  = document.getElementById('open-'+k).value || HOURS_DEFAULT.open;
+    const c  = document.getElementById('close-'+k).value || HOURS_DEFAULT.close;
+    const body = on
+      ? `<input type="time" class="ov-time" data-day="${k}" data-role="open"  value="${o}">
+         <span class="dash">–</span>
+         <input type="time" class="ov-time" data-day="${k}" data-role="close" value="${c}">`
+      : '—';
+    const cls = on ? 'ov on' : 'ov off';
+return `<div class="${cls}" data-day="${k}">
+          <span class="d">${T('days.'+k,k).slice(0,3).toLowerCase()}</span>
+          <span class="tt">${body}</span>
+        </div>`;
+
+  }).join('');
+}
+const ovHost = document.getElementById('hoursOverview');
+
+// Toggle a day by clicking its grey badge (but not when clicking the inputs)
+ovHost?.addEventListener('click', (e)=>{
+  if (e.target.closest('input.ov-time')) return; // don't toggle when editing time
+  const box = e.target.closest('.ov'); if(!box) return;
+  const day = box.getAttribute('data-day');
+  const cb  = document.getElementById('day-'+day);
+  cb.checked = !cb.checked;
+  renderOverview();
+  updateProgress();
+  if (cb.checked) {
+    const first = document.querySelector(`.ov input.ov-time[data-day="${day}"][data-role="open"]`);
+    first?.focus();
+  }
+});
+
+// Inline time edits sync to hidden storage
+ovHost?.addEventListener('input', (e)=>{
+  const inp = e.target;
+  if(!(inp instanceof HTMLInputElement)) return;
+  if(!inp.classList.contains('ov-time')) return;
+  const day = inp.getAttribute('data-day');
+  const role= inp.getAttribute('data-role'); // open|close
+  const targetId = (role === 'open') ? 'open-'+day : 'close-'+day;
+  const store = document.getElementById(targetId);
+  if(store){ store.value = inp.value; store.dataset.touched = '1'; }
+});
+
+
+
+      // Map
+      map = L.map('map').setView([52.502,13.402],13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      map.on('click', e=> setMarker(e.latlng.lat, e.latlng.lng, {doReverse:true}));
+
+      document.getElementById('geoBtn').addEventListener('click', ()=> map.locate({setView:true, maxZoom:16}));
+map.on('locationfound', e=> { setMarker(e.latlng.lat, e.latlng.lng, {doReverse:true, pan:true}); updateProgress(); });
+
+
+
+      // Chips + subpanels
+   document.addEventListener('change', e=>{
+  if (e.target.matches('.chip input')) { refreshChips(); togglePanelsByMainCats(); updateProgress(); }
+  if (e.target.matches('.sub-chip input')) { refreshSubchipStyles(); }
+  // (removed: day-chip/editor syncing – grey badges handle toggling/editing)
+});
+
+
+
+// (deleted: legacy .time-toggle handler)
+
+
+      refreshChips();
+
+      // Hours UI
+       // Hours UI
+  // Hours UI (inline chips + single editor)
+// Hours UI: hidden storage + interactive grey overview badges
+buildHoursUI();
+renderOverview();
+
+
+// Tools
+document.getElementById('hoursAllOpen')?.addEventListener('click', ()=>{
+  DAY_KEYS.forEach(k => { const cb = document.getElementById('day-'+k); if(cb) cb.checked = true; });
+  renderOverview();
+  updateProgress();
+});
+
+
+// Bulk: apply same times to all days (default action for new users)
+document.getElementById('applyAllTimes')?.addEventListener('click', ()=>{
+  const open  = (document.getElementById('bulkOpen')?.value || HOURS_DEFAULT.open);
+  const close = (document.getElementById('bulkClose')?.value || HOURS_DEFAULT.close);
+  DAY_KEYS.forEach(k=>{
+    const o = document.getElementById('open-'+k);
+    const c = document.getElementById('close-'+k);
+    if (o && c) { o.value = open; c.value = close; o.dataset.touched='1'; c.dataset.touched='1'; }
+    const cb = document.getElementById('day-'+k); if(cb) cb.checked = true;
+  });
+  renderOverview();
+  updateProgress();
+});
+
+
+
+document.getElementById('hoursAllClosed')?.addEventListener('click', ()=>{
+  DAY_KEYS.forEach(k => { const cb = document.getElementById('day-'+k); if(cb) cb.checked = false; });
+  renderOverview();
+  updateProgress();
+});
+
+ // Subcategories
+ renderSubchips();
+ refreshSubchipStyles();
+ togglePanelsByMainCats();
+ updateProgress();
+
+
+
+        // Address input → geocode
+  const addressEl = document.getElementById('address');
+  const runGeocode = debounce(async ()=>{
+    try{
+      const q = (addressEl.value||'').trim();
+      if(q.length < 3) return;
+      const pos = await geocodeAddress(q);
+      setMarker(pos.lat, pos.lng, {doReverse:false, pan:true}); updateProgress();
+    }catch(err){ /* ignore */ }
+  });
+  addressEl?.addEventListener('input', runGeocode);
+  addressEl?.addEventListener('blur', runGeocode);
+  addressEl?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') runGeocode(); });
+addressEl?.addEventListener('input', updateProgress);
+
+
+    // ---- Address suggestions (list + interactions)
+  let sugData = [];
+  const sugBox = document.getElementById('addrSug');
+
+  const updateSugs = debounce(async ()=>{
+    const q = (addressEl.value||'').trim();
+    sugData = await fetchSuggestions(q);
+    showSuggestions(sugData);
+  }, 300);
+
+  addressEl?.addEventListener('input', updateSugs);
+  addressEl?.addEventListener('focus', updateSugs);
+
+  // Click on a suggestion
+  sugBox?.addEventListener('click', (e)=>{
+    const item = e.target.closest('.sug-item'); if(!item) return;
+    const i = parseInt(item.getAttribute('data-i'), 10);
+    const pick = sugData[i]; if(!pick) return;
+    addressEl.value = pick.label;
+    hideSuggestions();
+    setMarker(pick.lat, pick.lng, {doReverse:false, pan:true});
+  });
+
+  // Keyboard navigation: ArrowDown/Up, Enter, Esc
+  addressEl?.addEventListener('keydown', (e)=>{
+    if(!sugBox || sugBox.style.display==='none') return;
+    const items = Array.from(sugBox.querySelectorAll('.sug-item'));
+    if(!items.length) return;
+
+    let idx = items.findIndex(el => el.getAttribute('aria-selected') === 'true');
+    if(e.key === 'ArrowDown'){ e.preventDefault(); idx = (idx+1) % items.length; }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); idx = (idx<=0?items.length:idx) - 1; }
+    else if(e.key === 'Enter'){ e.preventDefault();
+      if(idx >= 0){ items[idx].click(); }
+      else if (sugData[0]) {
+        addressEl.value = sugData[0].label;
+        hideSuggestions();
+        setMarker(sugData[0].lat, sugData[0].lng, {doReverse:false, pan:true});
+      }
+      return;
+    } else if(e.key === 'Escape'){ hideSuggestions(); return; } else { return; }
+
+    items.forEach(el=>el.setAttribute('aria-selected','false'));
+    if(idx>=0){ items[idx].setAttribute('aria-selected','true'); items[idx].scrollIntoView({block:'nearest'}); }
+  });
+
+  // Hide suggestions when clicking outside
+  document.addEventListener('click', (e)=>{
+    if(e.target.id==='address') return;
+    if(e.target.closest('#addrSug')) return;
+    hideSuggestions();
+  });
+
+    // Lat/Lng inputs → marker
+  const latEl = document.getElementById('latInput');
+  const lngEl = document.getElementById('lngInput');
+
+  function parseLL(){
+    const la = parseFloat((latEl?.value||'').replace(',','.'));
+    const ln = parseFloat((lngEl?.value||'').replace(',','.'));
+    if(Number.isFinite(la) && Number.isFinite(ln)) return {la, ln};
+    return null;
+  }
+
+  const updateFromLL = debounce(()=>{
+    const v = parseLL(); if(!v) return;
+    setMarker(v.la, v.ln, {doReverse:true, pan:true});
+  }, 400);
+
+/* Lat/Lng manual editing removed (hidden now) */
+
+
+      // Dropzone
+      // --- Dropzone (robust) ---
+(function setupDropzone(){
+  const dz = document.getElementById('dropzone');
+  const fi = document.getElementById('fileInput');
+
+  if(!dz || !fi) return;
+
+  function toFiles(list){
+    // Convert FileList/array-like into a real array
+    return Array.from(list || []).filter(f => f && f.type && f.type.startsWith('image/'));
+  }
+
+  // Make sure selecting the same file twice still fires change
+  function resetInputValueLater(){
+    setTimeout(() => { fi.value = ''; }, 0);
+  }
+
+  // Clicking the <label id="dropzone"> already opens the file picker.
+// Removing manual .click() avoids double-trigger that required choosing twice.
+
+
+  fi.addEventListener('change', (e) => {
+  const files = toFiles(e.target.files);
+  if (files.length === 0) { resetInputValueLater(); return; }
+  addFiles(files); // add immediately
+  // Clear value so selecting the same file works on the very next try (no second pick needed)
+  resetInputValueLater();
+});
+
+
+  // Drag & drop
+  ['dragenter','dragover'].forEach(ev =>
+    dz.addEventListener(ev, (e)=>{ e.preventDefault(); dz.classList.add('dragover'); })
+  );
+  ['dragleave','dragend','drop'].forEach(ev =>
+    dz.addEventListener(ev, ()=> dz.classList.remove('dragover'))
+  );
+  dz.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    const files = toFiles(e.dataTransfer?.files);
+    if (files.length) addFiles(files);
+  });
+
+  // Safety: log when previews render
+  const _renderPreviews = window.renderPreviews;
+  window.renderPreviews = function(){
+    try { _renderPreviews(); }
+    catch(err){ console.error('Preview render failed:', err); }
+  };
+})();
+
+      // Save
+      document.getElementById('saveBtn').addEventListener('click', saveShop);
+    });
+
+    async function saveShop(){
+      const name=(document.getElementById('name').value||'').trim();
+      if(!name){ alert(T('msg.needName','Bitte einen Namen eingeben.')); return; }
+
+      const lat=parseFloat((document.getElementById('latInput').value||'').replace(',','.'));
+const lng=parseFloat((document.getElementById('lngInput').value||'').replace(',','.'));
+
+      if(!Number.isFinite(lat)||!Number.isFinite(lng)){ alert(T('msg.needPos','Bitte einen Punkt auf der Karte setzen.')); return; }
+
+      const { opening_hours, opening_days } = collectOpeningHours();
+      const category_details = collectSubcategories();
+
+      // Prepare ID & folder for uploads
+      // Ensure user is signed in (uploads require auth)
+const { data: { user } } = await supa.auth.getUser();
+if (!user) {
+  try { openAuth(); } catch(_) {}
+  alert(curLang?.() === 'en' ? 'Please sign in to upload images.' : 'Bitte einloggen, um Bilder hochzuladen.');
+  return;
+}
+
+// Prepare ID & per-user folder for uploads
+const id = `${slugify(name)}-${randomId()}`;
+const folder = `${user.id}/${id}`;
+let heroUrl = null, imageUrls = [];
+
+// Upload to Storage if files selected
+if (selectedFiles.length) {
+  try {
+    const r = await uploadAllImages(folder);   // <— use per-user folder
+    heroUrl  = r.heroUrl;
+    imageUrls = r.urls;
+  } catch (e) {
+    console.error('[Storage] Upload error:', e);
+    alert(curLang?.() === 'en' ? 'Image upload failed.' : 'Bild-Upload fehlgeschlagen.');
+    return;
+  }
+}
+
+
+      const baseRow = {
+        id,
+        name,
+        address: (document.getElementById('address').value||'').trim(),
+        lat, lng,
+        vegetarian: document.getElementById('vegOnly').checked,
+        meat: document.getElementById('meatOnly').checked,
+        sauces: document.getElementById('saucesOnly').checked,
+        homemade_bread: document.getElementById('breadOnly').checked,
+        payment_cards: document.getElementById('cards').checked,
+        price_kebap: toNum(document.getElementById('pK').value),
+        price_durum: toNum(document.getElementById('pD').value),
+        price_box:   toNum(document.getElementById('pB').value),
+        opening_days,
+        opening_hours,
+        hero_image_url: heroUrl,
+        image_urls: imageUrls.length ? imageUrls : null,
+        rating_admin: null
+      };
+
+      const rowWithSub = { ...baseRow, category_details };
+
+      try{
+        const btn = document.getElementById('saveBtn');
+        const old = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '⏳ ' + T('msg.saving','Speichere…');
+
+        let { data, error } = await supa.from('shops').insert([rowWithSub]).select('*').single();
+
+        // fallback if backend lacks category_details column
+        if(error && String(error.message||'').toLowerCase().includes('column') && String(error.message).includes('category_details')){
+          console.warn('Retrying without category_details…');
+          ({ data, error } = await supa.from('shops').insert([baseRow]).select('*').single());
+        }
+
+        btn.disabled = false; btn.innerHTML = old;
+
+        if(error){
+          console.error('[Supabase] insert error:', error);
+          alert(T('msg.error','Speichern fehlgeschlagen. Details in der Konsole.'));
+          return;
+        }
+        console.log('[Supabase] inserted:', data);
+        alert(T('msg.saved','Shop gespeichert ✅'));
+        location.href='index.html';
+      }catch(err){
+        console.error(err);
+        alert(T('msg.error','Speichern fehlgeschlagen. Details in der Konsole.'));
+      }
+    }
+  </script>
+
+  <!-- Optional mobile dropdown container (kept for parity) -->
+  <div id="mobileMenuPortal" style="display:none"></div>
+</body>
+</html>
