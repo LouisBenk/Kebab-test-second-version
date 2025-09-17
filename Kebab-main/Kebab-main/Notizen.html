@@ -1,0 +1,9 @@
+python -m http.server 3000 --directory docs
+
+
+git checkout main
+git pull --rebase
+git add docs -A
+git commit -m "update site"
+git push origin main
+

@@ -1,0 +1,13 @@
+{
+  "nav": { "filter":"Filter", "add":"Shop hinzufügen", "feedback":"Feedback", "selection":"Preisliste", "about":"Über mich", "back":"Zur Karte" },
+  "search": { "ph":"Suche nach Name, Straße, Tags … (z.B. falafel, scharf)" },
+  "modal": { "title":"Filter", "clear":"Löschen", "apply":"Anwenden" },
+  "weekday": { "mon":"Montag","tue":"Dienstag","wed":"Mittwoch","thu":"Donnerstag","fri":"Freitag","sat":"Samstag","sun":"Sonntag" },
+  "cat": { "title":"Kategorie", "veg":"Vegetarisch", "meat":"Fleisch", "sauces":"Saucen", "bread":"Brot hausgemacht" },
+  "veg": { "title":"Vegetarisch – Typen", "falafel":"Falafel", "halloumi":"Halloumi", "seitan":"Seitan" },
+  "meat": { "title":"Fleisch – Typen", "chicken":"Hähnchen", "veal":"Kalb", "lamb":"Lamm", "other":"Andere" },
+  "sauce": { "title":"Saucen – Typen", "spicy":"Scharf", "garlic":"Knoblauch", "cocktail":"Cocktail", "homemade":"Hausgemacht" },
+  "price": { "max":"Max-Preis", "kebap":"Kebap €", "durum":"Dürüm €", "box":"Box €" },
+  "geo": { "myLoc":"Meine Position", "err":"Position konnte nicht ermittelt werden." },
+  "popup": { "prices":"Preise", "days":"Tage", "noaddr":"Keine Adresse" }
+}

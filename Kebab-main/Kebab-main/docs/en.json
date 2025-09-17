@@ -1,0 +1,13 @@
+{
+  "nav": { "filter":"Filter", "add":"Add Shop", "feedback":"Feedback", "selection":"Price list", "about":"About me", "back":"Back to map" },
+  "search": { "ph":"Search by name, street, tags… (e.g., falafel, spicy)" },
+  "modal": { "title":"Filter", "clear":"Clear", "apply":"Apply" },
+  "weekday": { "mon":"Monday","tue":"Tuesday","wed":"Wednesday","thu":"Thursday","fri":"Friday","sat":"Saturday","sun":"Sunday" },
+  "cat": { "title":"Category", "veg":"Vegetarian", "meat":"Meat", "sauces":"Sauces", "bread":"Homemade bread" },
+  "veg": { "title":"Vegetarian – Types", "falafel":"Falafel", "halloumi":"Halloumi", "seitan":"Seitan" },
+  "meat": { "title":"Meat – Types", "chicken":"Chicken", "veal":"Veal", "lamb":"Lamb", "other":"Other" },
+  "sauce": { "title":"Sauces – Types", "spicy":"Spicy", "garlic":"Garlic", "cocktail":"Cocktail", "homemade":"Homemade" },
+  "price": { "max":"Max price", "kebap":"Kebap €", "durum":"Durum €", "box":"Box €" },
+  "geo": { "myLoc":"My location", "err":"Could not get position." },
+  "popup": { "prices":"Prices", "days":"Days", "noaddr":"No address" }
+}
